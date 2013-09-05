@@ -1,0 +1,10 @@
+glance -U http://192.168.28.131:9292/v1 add name="lipengbo" is_public=true container_format=ovf disk_format=qcow2 < cirros-0.3.0-i386-disk.img
+
+glance -U http://192.168.28.131:9292/v1 index
+ID                                   Name                           Disk Format          Container Format     Size          
+------------------------------------ ------------------------------ -------------------- -------------------- --------------
+5cc52eb7-17b4-4e57-bf26-53ca90d787ae luxia                          qcow2                ovf                        54984704
+
+
+wget http://192.168.28.131:9292/v1/images/5cc52eb7-17b4-4e57-bf26-53ca90d787ae
+mv 5cc52eb7-17b4-4e57-bf26-53ca90d787ae luxia

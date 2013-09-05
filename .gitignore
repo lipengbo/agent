@@ -1,0 +1,30 @@
+# Unit test / coverage reports
+.coverage
+.tox
+nosetests.xml
+# Translations
+*.mo
+# log
+my_logs
+#common
+.DS_Store
+.svn
+*~
+*.swp
+*.rbc
+*.py[cod]
+# C extensions
+*.so
+# Packages
+*.egg
+*.egg-info
+# Installer logs
+pip-log.txt
+# Mr Developer
+.ropeproject
+.mr.developer.cfg
+.project
+.pydevproject
+# bak file
+ip.bak
+iptables.bak
