@@ -168,3 +168,8 @@ class MonitorService(xmlrpc.XMLRPC):
         domain = DomainMonitor(vname)
         domainStatus = domain.get_status()
         return domainStatus
+
+    def xmlrpc_get_domain_state(self, vname):
+        domain = DomainMonitor(vname)
+        domain_state = domain.get_state(vname)
+        return domain_state
