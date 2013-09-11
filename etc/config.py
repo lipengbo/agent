@@ -51,7 +51,7 @@ nat_service_port = 8894
 #[stateManagerment]
 #stateanagerment在vt_manager上
 statemanagerment_ip = '192.168.5.9'
-statemanagerment_port = 8890
+statemanagerment_port = 8891
 
 #log相关配置
 #[log]

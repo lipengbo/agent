@@ -32,6 +32,7 @@ class HostMonitor(libvirtConn.LibvirtConnection):
             xml_inf = self.conn.getSysinfo(0)
             cpu_Hz = util.get_xml_path(xml_inf, "/sysinfo/processor/entry[6]")
             info['cpu'] = "%s %s %s" % (arch, vcpus, cpu_Hz)
+            info['vcpus'] = "%s" % vcpus
             info['mem'] = '%s' % (self.get_mem_usage()[0] >> 20)
             info['hdd'] = '%s' % (self.get_disk_usage("/")[0] >> 30)
             return info
@@ -39,18 +40,30 @@ class HostMonitor(libvirtConn.LibvirtConnection):
             LOG.error(traceback.print_exc())
 
     def get_cpu_usage(self):
+        """
+        return 52.5
+        """
         return psutil.cpu_percent()
 
     def get_mem_usage(self):
+        """
+        It's a list
+        vmem(total=4037754880L, available=2138624000L, percent=47.0, used=3093798912L, free=943955968L, active=1494089728,
+        inactive=1320841216, buffers=507686912L, cached=686981120)
+        """
         return psutil.virtual_memory()
 
     def get_disk_usage(self, partition):
+        """
+        It's a list
+        usage(total=350163386368, used=52553580544, free=279822499840, percent=15.0)
+        """
         return psutil.disk_usage(partition)
 
     def get_net_usage(self, interface):
         return psutil.network_io_counters(1)[interface]
 
-    def get_usage(self):
+    def get_status(self):
         cpuusage = '%s' % self.get_cpu_usage()
         memusage = '%s' % self.get_mem_usage()[2]
         diskusage = '%s' % self.get_disk_usage("/")[3]
@@ -152,12 +165,13 @@ class MonitorService(xmlrpc.XMLRPC):
 
     def xmlrpc_get_host_status(self):
         host = HostMonitor()
-        cpu_free = 100 - host.get_cpu_usage()
-        memStatus = host.get_mem_usage()
-        mem_free = "%s" % (memStatus['avail'] >> 20)
-        mem_total = "%s" % (memStatus['all'] >> 20)
-        diskStatus = host.get_disk_usage()
-        return {'cpu': cpu_free, 'mem': {'all': mem_total, 'avail': mem_free}, 'disk': diskStatus}
+        cpu_percent = host.get_cpu_usage()
+        mem_usage = host.get_mem_usage()
+        mem_percent = mem_usage[2]
+        mem_free = "%s" % (mem_usage[1] >> 20)
+        mem_total = "%s" % (mem_usage[0] >> 20)
+        disk_free = "%s" % (host.get_disk_usage('/')[2] >> 30)
+        return {'cpu_percent': cpu_percent, 'mem': {'total': mem_total, 'free': mem_free, 'percent': mem_percent}, 'disk_free': disk_free}
 
     def xmlrpc_get_host_status_percent(self):
         host = HostMonitor()
