@@ -67,7 +67,7 @@ class HostMonitor(libvirtConn.LibvirtConnection):
         cpuusage = '%s' % self.get_cpu_usage()
         memusage = '%s' % self.get_mem_usage()[2]
         diskusage = '%s' % self.get_disk_usage("/")[3]
-        netusage = '%s' % ((self.get_net_usage(config.out_br)[0] >> 20) / 10.0)
+        netusage = '%s' % ((self.get_net_usage(config.data_br)[0] >> 20) / 10.0)
         return {'cpu': cpuusage, 'mem': memusage, 'disk': diskusage, 'net': netusage}
 
 

@@ -251,8 +251,16 @@ class LibvirtConnection(object):
                 'bridge': bridge,
                 'mac': mac,
                 'hdd': imageSize 2G,
-                'dhcp': 1 or 0,
+                'dhcp': 1 or 0, 1 代表dhcp  0 代表静态注入
                 'glanceURL': glanceURL,
+            }
+        netInfo:
+            {
+                'ip': address,
+                'netmask': netmask,
+                'broadcast': broadcast,
+                'gateway': gateway,
+                'dns': dns,
             }
         """
         netXml = self.to_interface_xml(netInfo)

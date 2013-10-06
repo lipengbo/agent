@@ -38,6 +38,7 @@ class ComputeManager(LibvirtConnection):
                 'hdd': imageSize 2G,
                 'dhcp': 1 or 0,
                 'glanceURL': glanceURL,
+                'type':0/1/2 0 controller 1 slice 2 gateway
             }
         netInfo:
             {
@@ -50,7 +51,7 @@ class ComputeManager(LibvirtConnection):
         """
         MUTEX.acquire()
         try:
-            vmInfo['bridge'] = self.prepare_link(vmInfo['name'])
+            vmInfo['bridge'] = self.prepare_link(vmInfo['name'], vmInfo['type'])
             if not vmInfo['bridge']:
                 raise exception.PrepareLinkError()
             self.create_vm(vmInfo, netInfo)
@@ -73,12 +74,12 @@ class ComputeManager(LibvirtConnection):
 
     def set_domain_state(vname, state):
         try:
-            client = rpcClient.get_rpc_client(config.statemanagerment_ip, config.statemanagerment_port)
+            client = rpcClient.get_rpc_client(config.vt_manager_ip, config.vt_manager_port)
             client.set_domain_state(vname, state)
         except:
             LOG.error(traceback.print_exc())
 
-    def prepare_link(self, vname):
+    def prepare_link(self, vname, vmtype):
         fix = vname[0:8]
         bridge_name = 'br%s' % fix
         bridge_port = 'b-%s' % fix
@@ -90,7 +91,11 @@ class ComputeManager(LibvirtConnection):
         excutils.execute(['ip', 'link', 'set', bridge_port, 'promisc', 'on'])
         excutils.execute(['ip', 'link', 'set', peer_port, 'promisc', 'on'])
         vswitch.ovs_vsctl_add_port_to_bridge(bridge_name, bridge_port)
-        vswitch.ovs_vsctl_add_port_to_bridge(config.out_br, peer_port)
+        if vmtype == 0:
+            bridge = config.control_br
+        elif vmtype == 1:
+            bridge = config.data_br
+        vswitch.ovs_vsctl_add_port_to_bridge(bridge, peer_port)
         return bridge_name
 
     def del_prepare_link(self, vname):
@@ -145,6 +150,7 @@ class ComputeService(xmlrpc.XMLRPC):
                 'hdd': imageSize 2G,
                 'dhcp': 1 or 0,
                 'glanceURL': glanceURL,
+                'type':0/1/2 0 controller 1 slice 2 gateway
             }
         netInfo:
             {

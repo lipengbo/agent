@@ -10,19 +10,22 @@
 #agent上启用的服务。1 代表启用 ; 0 代表禁用
 compute_service = 1
 monitor_service = 1
-ovs_service = 1
-gateway_service = 1
-nat_service = 1
-dhcp_service = 1
+ovs_service = 0
+gateway_service = 0
+nat_service = 0
+dhcp_service = 0
 
 #[common]
-out_br = 'br100'
-ip = '192.168.5.9'
+control_br = 'br1'
+data_br = 'br100'
+#当设备为域间网关时需要配置对外的网桥
+out_br = 'br-out'
+ip = '127.0.0.1'
 
 #Compute Service配置
-#out_br: 设置本机的出口网桥
+#data_br: 设置本机的出口网桥
 #[compute]
-compute_service_bridge = out_br
+compute_service_bridge = data_br
 compute_service_port = 8886
 
 #libvirt相关配置
@@ -41,17 +44,16 @@ controller_bin_path = '/usr/local/floodloght/target'
 dhcp_service_port = 8888
 
 #[gateway]
-gateway_service_bridge = out_br
+gateway_service_bridge = data_br
 gateway_service_port = 8893
 
 #[nat]
-nat_service_bridge = out_br
+nat_service_bridge = data_br
 nat_service_port = 8894
 
-#[stateManagerment]
-#stateanagerment在vt_manager上
-statemanagerment_ip = '192.168.5.9'
-statemanagerment_port = 8891
+#[vt_manager]
+vt_manager_ip = '127.0.0.1'
+vt_manager_port = 8891
 
 #log相关配置
 #[log]

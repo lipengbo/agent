@@ -87,7 +87,7 @@ class GatewayHandler(object):
         excutils.execute(['ip', 'link', 'set', peer_port, 'up'])
         excutils.execute(['ip', 'link', 'set', bridge_port, 'promisc', 'on'])
         excutils.execute(['ip', 'link', 'set', peer_port, 'promisc', 'on'])
-        vswitch.ovs_vsctl_add_port_to_bridge(config.out_br, peer_port)
+        vswitch.ovs_vsctl_add_port_to_bridge(config.data_br, peer_port)
         return peer_port
 
 

@@ -208,7 +208,7 @@ def ovs_get_switch_dpid():
     """
     bridge = ovs_get_controller_bridge()
     if not bridge:
-        bridge = config.out_br
+        bridge = config.data_br
     ret, out, _err = util.start_process(["ovs-vsctl", "get", "bridge", bridge, "datapath_id"])
     if ret == 0:
         return ''.join(out.split()).replace('"', '')
