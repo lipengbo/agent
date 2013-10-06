@@ -27,7 +27,7 @@ LOG = logging.getLogger("agent.image")
 def fetch_image(glanceURL, imageUUID):
     image = os.path.join(config.image_path, imageUUID)
     if not os.path.exists(image):
-        out, err = excutils.execute("wget -O %s %s/%s" % (image, glanceURL, imageUUID))
+        out, err = excutils.execute("wget -O %s %s" % (image, glanceURL))
         if err:
             return None
     return image
