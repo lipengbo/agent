@@ -15,6 +15,7 @@ my_logs
 *.py[cod]
 # C extensions
 *.so
+logs
 # Packages
 *.egg
 *.egg-info

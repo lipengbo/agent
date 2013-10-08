@@ -7,12 +7,21 @@
 import traceback
 from twisted.internet import reactor
 from twisted.web import server
+
+
+def mklogdir():
+    import os
+    if not os.path.exists('logs'):
+        os.mkdir('logs')
+mklogdir()
 from service.ovs_service import DeviceCommService
 from service.monitor import MonitorService
 from service.compute import ComputeService
 from service.dhcp import DHCPService
 from etc import config
 from libs import excutils
+
+
 from libs import log as logging
 LOG = logging.getLogger("agent.virt")
 

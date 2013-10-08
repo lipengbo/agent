@@ -4,6 +4,7 @@ agent
   [安装]
     pip install -r requirements.txt
     所有服务均可配置，详细说明请查看配置文件
+    务必保证装agent的机器有两个网桥，一个连接控制网络，一个连接数据层面
   [启动]
     python agent.py
 
