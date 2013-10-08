@@ -58,6 +58,8 @@ class ComputeManager(LibvirtConnection):
             self.set_domain_state(vmInfo['name'], constants.DOMAIN_STATE['nostate'])
             return True
         except:
+            print traceback.print_exc()
+            self.del_prepare_link(vmInfo['name'])
             self.set_domain_state(vmInfo['name'], constants.DOMAIN_STATE['failed'])
             return False
         finally:
@@ -72,7 +74,7 @@ class ComputeManager(LibvirtConnection):
             LOG.error(traceback.print_exc())
         return False
 
-    def set_domain_state(vname, state):
+    def set_domain_state(self, vname, state):
         try:
             client = rpcClient.get_rpc_client(config.vt_manager_ip, config.vt_manager_port)
             client.set_domain_state(vname, state)
@@ -82,14 +84,19 @@ class ComputeManager(LibvirtConnection):
     def prepare_link(self, vname, vmtype):
         fix = vname[0:8]
         bridge_name = 'br%s' % fix
-        bridge_port = 'b-%s' % fix
-        peer_port = 'p-%s' % fix
+        bridge_port = 'b%s' % fix
+        peer_port = 'p%s' % fix
         vswitch.ovs_vsctl_add_bridge(bridge_name)
-        excutils.execute(['ip', 'link', 'add', bridge_port, 'type', 'veth', 'peer', 'name', peer_port])
-        excutils.execute(['ip', 'link', 'set', bridge_port, 'up'])
-        excutils.execute(['ip', 'link', 'set', peer_port, 'up'])
-        excutils.execute(['ip', 'link', 'set', bridge_port, 'promisc', 'on'])
-        excutils.execute(['ip', 'link', 'set', peer_port, 'promisc', 'on'])
+        #excutils.execute(['ip', 'link', 'add', bridge_port, 'type', 'veth', 'peer', 'name', peer_port])
+        #excutils.execute(['ip', 'link', 'set', bridge_port, 'up'])
+        #excutils.execute(['ip', 'link', 'set', peer_port, 'up'])
+        #excutils.execute(['ip', 'link', 'set', bridge_port, 'promisc', 'on'])
+        #excutils.execute(['ip', 'link', 'set', peer_port, 'promisc', 'on'])
+        excutils.execute('ip link add %s type veth peer name %s' % (bridge_port, peer_port))
+        excutils.execute('ip link set %s up' % bridge_port)
+        excutils.execute('ip link set %s up' % peer_port)
+        excutils.execute('ip link set %s promisc on' % bridge_port)
+        excutils.execute('ip link set %s promisc on' % peer_port)
         vswitch.ovs_vsctl_add_port_to_bridge(bridge_name, bridge_port)
         if vmtype == 0:
             bridge = config.control_br
@@ -101,9 +108,11 @@ class ComputeManager(LibvirtConnection):
     def del_prepare_link(self, vname):
         fix = vname[0:8]
         bridge_name = 'br%s' % fix
-        bridge_port = 'b-%s' % fix
-        peer_port = 'p-%s' % fix
-        excutils.execute(['ip', 'link', 'del', bridge_port, 'type', 'veth', 'peer', 'name', peer_port])
+        bridge_port = 'b%s' % fix
+        peer_port = 'p%s' % fix
+        #excutils.execute(['ip', 'link', 'del', bridge_port, 'type', 'veth', 'peer', 'name', peer_port])
+        excutils.execute('ip link del %s type veth peer name %s' % (bridge_port, peer_port))
+        vswitch.ovs_vsctl_del_port_from_bridge(bridge_name, bridge_port)
         vswitch.ovs_vsctl_del_bridge(bridge_name)
         return bridge_name
 

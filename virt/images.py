@@ -37,7 +37,7 @@ def create_image(glanceURL, imageUUID, vname, size, dhcp=1, net=None, key=None):
     image = fetch_image(glanceURL, imageUUID)
     if image:
         instance_path = os.path.join(config.image_path, vname)
-        instance_image = os.path.join(config.image_path, vname, vname)
+        instance_image = os.path.join(config.image_path, vname, imageUUID)
         try:
             excutils.execute("mkdir -p %s" % instance_path)
             excutils.execute("qemu-img create -f qcow2 -o backing_file=%s %s" % (image, instance_image))
