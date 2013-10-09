@@ -87,6 +87,15 @@ def ovs_vsctl_del_port_from_bridge(bridge, port):
     return ret
 
 
+def ovs_vsctl_del_port(port):
+    """
+    This function removes given port from a OVS bridge.
+    """
+    ret, _out, _err = util.start_process(
+        ["ovs-vsctl", "--", "--if-exists", "del-port", port])
+    return ret
+
+
 def ovs_vsctl_set(table, record, column, key, value):
     """
     This function allows to alter the OVS database. If column is a map, then

@@ -68,11 +68,13 @@ class ComputeManager(LibvirtConnection):
     def delete_vm_workflow(self, vname):
         try:
             self.delete_vm(vname)
-            self.del_prepare_link(vname)
-            return True
         except:
             LOG.error(traceback.print_exc())
-        return False
+        try:
+            self.del_prepare_link(vname)
+        except:
+            LOG.error(traceback.print_exc())
+        return True
 
     def set_domain_state(self, vname, state):
         try:
@@ -100,7 +102,7 @@ class ComputeManager(LibvirtConnection):
         vswitch.ovs_vsctl_add_port_to_bridge(bridge_name, bridge_port)
         if vmtype == 0:
             bridge = config.control_br
-        elif vmtype == 1:
+        else:
             bridge = config.data_br
         vswitch.ovs_vsctl_add_port_to_bridge(bridge, peer_port)
         return bridge_name
@@ -112,8 +114,8 @@ class ComputeManager(LibvirtConnection):
         peer_port = 'p%s' % fix
         #excutils.execute(['ip', 'link', 'del', bridge_port, 'type', 'veth', 'peer', 'name', peer_port])
         excutils.execute('ip link del %s type veth peer name %s' % (bridge_port, peer_port))
-        vswitch.ovs_vsctl_del_port_from_bridge(bridge_name, bridge_port)
         vswitch.ovs_vsctl_del_bridge(bridge_name)
+        vswitch.ovs_vsctl_del_port(peer_port)
         return bridge_name
 
 

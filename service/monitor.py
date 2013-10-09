@@ -74,7 +74,8 @@ class HostMonitor(libvirtConn.LibvirtConnection):
 class DomainMonitor(libvirtConn.LibvirtConnection):
 
     def __init__(self, vname):
-        super(DomainMonitor, self).__init__(vname)
+        super(DomainMonitor, self).__init__()
+        self.vname = vname
 
     def __del__(self):
         super(DomainMonitor, self).__del__()
@@ -184,6 +185,6 @@ class MonitorService(xmlrpc.XMLRPC):
         return domainStatus
 
     def xmlrpc_get_domain_state(self, vname):
-        domain = DomainMonitor(vname)
-        domain_state = domain.get_state(vname)
+        host = HostMonitor()
+        domain_state = host.get_state(vname)
         return domain_state

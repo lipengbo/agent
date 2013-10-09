@@ -11,7 +11,6 @@ import traceback
 from libs import log as logging
 from etc import config
 from virt import images
-from libs.exception import CreateImageError
 LOG = logging.getLogger("agent.virt")
 
 
@@ -97,73 +96,67 @@ class LibvirtConnection(object):
         return machine
 
     def get_dom(self, vname):
-        if self.dom:
-            return self.dom
-        if self.conn:
-            try:
-                dom = self.conn.lookupByName(self.vname)
-            except libvirt.libvirtError:
-                dom = None
+        dom = self.conn.lookupByName(vname)
         return dom
 
     def get_power_state(self, vname):
-        self.dom = self.get_dom(vname)
-        if self.dom:
-            state = self.dom.isActive()
+        dom = self.get_dom(vname)
+        if dom:
+            state = dom.isActive()
             return state
 
     def get_xml(self, vname):
-        self.dom = self.get_dom(vname)
-        if self.dom:
-            xml = self.dom.XMLDesc(0)
+        dom = self.get_dom(vname)
+        if dom:
+            xml = dom.XMLDesc(0)
             xml_spl = xml.split('\n')
             return xml_spl
 
     def get_mem(self, vname):
-        self.dom = self.get_dom(vname)
-        if self.dom:
-            xml = self.dom.XMLDesc(0)
+        dom = self.get_dom(vname)
+        if dom:
+            xml = dom.XMLDesc(0)
             mem = util.get_xml_path(xml, "/domain/currentMemory")
             mem = int(mem) << 10
             return mem
 
     def get_core(self, vname):
-        self.dom = self.get_dom(vname)
-        if self.dom:
-            xml = self.dom.XMLDesc(0)
+        dom = self.get_dom(vname)
+        if dom:
+            xml = dom.XMLDesc(0)
             cpu = util.get_xml_path(xml, "/domain/vcpu")
             return cpu
 
     def get_vnc(self, vname):
-        self.dom = self.get_dom(vname)
-        if self.dom:
-            xml = self.dom.XMLDesc(0)
+        dom = self.get_dom(vname)
+        if dom:
+            xml = dom.XMLDesc(0)
             vnc = util.get_xml_path(xml, "/domain/devices/graphics/@port")
             return vnc
 
     def get_hdd(self, vname):
-        self.dom = self.get_dom(vname)
-        if self.dom:
-            xml = self.dom.XMLDesc(0)
+        dom = self.get_dom(vname)
+        if dom:
+            xml = dom.XMLDesc(0)
             hdd_path = util.get_xml_path(
                 xml, "/domain/devices/disk[1]/source/@file")
             hdd_fmt = util.get_xml_path(
                 xml, "/domain/devices/disk[1]/driver/@type")
-            size = self.dom.blockInfo(hdd_path, 0)[0]
+            size = dom.blockInfo(hdd_path, 0)[0]
             # image = re.sub('\/.*\/', '', hdd_path)
             return hdd_path, size, hdd_fmt
 
     def get_arch(self, vname):
-        self.dom = self.get_dom(vname)
-        if self.dom:
-            xml = self.dom.XMLDesc(0)
+        dom = self.get_dom(vname)
+        if dom:
+            xml = dom.XMLDesc(0)
             arch = util.get_xml_path(xml, "/domain/os/type/@arch")
             return arch
 
     def get_nic(self, vname):
-        self.dom = self.get_dom(vname)
-        if self.dom:
-            xml = self.dom.XMLDesc(0)
+        dom = self.get_dom(vname)
+        if dom:
+            xml = dom.XMLDesc(0)
             mac = util.get_xml_path(
                 xml, "/domain/devices/interface/mac/@address")
             nic = util.get_xml_path(
@@ -174,27 +167,27 @@ class LibvirtConnection(object):
             return mac, nic
 
     def get_nic_target(self, vname):
-        self.dom = self.get_dom(vname)
-        if self.dom:
-            xml = self.dom.XMLDesc(0)
+        dom = self.get_dom(vname)
+        if dom:
+            xml = dom.XMLDesc(0)
             target = util.get_xml_path(xml, '/domain/devices/interface/target/@dev')
             return target
 
     def autostart(self, vname):
-        self.dom = self.get_dom(vname)
-        if self.dom:
-            return self.dom.autostart()
+        dom = self.get_dom(vname)
+        if dom:
+            return dom.autostart()
 
     def get_state(self, vname):
-        self.dom = self.get_dom(vname)
-        if self.dom:
-            return self.dom.info()[0]
+        dom = self.get_dom(vname)
+        if dom:
+            return dom.info()[0]
 
     def do_action(self, vname, action):
-        self.dom = self.get_dom(vname)
+        dom = self.get_dom(vname)
         op_supported = ('create', 'suspend', 'undefine', 'resume', 'destroy')
         if action in op_supported:
-            getattr(self.dom, action)()
+            getattr(dom, action)()
         else:
             from libs.exception import ActionError
             raise ActionError("domain only contains action= %s" % action)
@@ -264,14 +257,12 @@ class LibvirtConnection(object):
             }
         """
         netXml = self.to_interface_xml(netInfo)
-        if images.create_image(vmInfo['glanceURL'], vmInfo['img'], vmInfo['name'], vmInfo['hdd'], vmInfo['dhcp'], net=netXml, key=key):
-            domainXml = self.to_xml(vmInfo)
-            self.conn.defineXML(domainXml)
-        else:
-            raise CreateImageError()
+        images.create_image(vmInfo['glanceURL'], vmInfo['img'], vmInfo['name'], vmInfo['hdd'], vmInfo['dhcp'], net=netXml, key=key)
+        domainXml = self.to_xml(vmInfo)
+        self.conn.defineXML(domainXml)
 
     def delete_vm(self, vname):
         if self.get_state(vname) != 5:
-            self.do_action('destroy')
-        self.do_action('undefine')
-        images.delete_image(config.image_path, vname)
+            self.do_action(vname, 'destroy')
+        self.do_action(vname, 'undefine')
+        images.delete_image(vname)

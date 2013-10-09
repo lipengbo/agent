@@ -1,5 +1,6 @@
 <domain type='%(domain_type)s'>
         <name>%(name)s</name>
+        <uuid>%(name)s</uuid>
         <memory>%(mem)s</memory>
         <currentMemory>%(mem)s</currentMemory>
         <vcpu>%(cpus)s</vcpu>
@@ -23,27 +24,14 @@
                 <disk type='file' device='disk'>
                         <driver name='qemu' type='%(disk_type)s'/>
                         <source file='/var/lib/libvirt/images/%(name)s/%(img)s'/>
-                        <target dev='hda' bus='ide'/>
+                        <target dev='vda' bus='virtio'/>
                 </disk>
-                <controller type='ide' index='0'>
-                        <address type='pci' domain='0x0000' bus='0x00' slot='0x01' function='0x1'/>
-                </controller>
                 <interface type='bridge'>
                         <source bridge='%(bridge)s'/>
                         <mac address='%(mac)s'/>
                         <virtualport type='openvswitch'></virtualport>
                         <target dev='%(target_port)s'/>
                 </interface>
-                <input type='tablet' bus='usb'/>
-                <input type='mouse' bus='ps2'/>
-                <graphics type='vnc' port='-1' autoport='yes'/>
-                <video>
-                        <model type='cirrus' vram='9216' heads='1'/>
-                        <address type='pci' domain='0x0000' bus='0x00' slot='0x02' function='0x0'/>
-                </video>
-                <memballoon model='virtio'>
-                <address type='pci' domain='0x0000' bus='0x00' slot='0x05' function='0x0'/>
-                </memballoon>
-                <graphics type='vnc' port='${vnc_port}' listen='0.0.0.0'/>
+                <graphics type='vnc' port='%(vnc_port)s' listen='0.0.0.0'/>
         </devices>
 </domain>
