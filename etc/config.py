@@ -28,10 +28,6 @@ ip = '127.0.0.1'
 compute_service_bridge = data_br
 compute_service_port = 8886
 
-#libvirt相关配置
-#一般新安装一个节点以后需要配置 user passwd
-libvirt_user = 'lipengbo'
-libvirt_passwd = '123'
 
 #Monitor 用于获取宿主及和虚拟机的状态，外界通过rpc接口获取具体的监控数据
 monitor_service_port = 8887
@@ -117,3 +113,5 @@ disk_type = 'qcow2'
 domain_type = 'kvm'
 image_path = '/var/lib/libvirt/images'
 rpc_connection_timeout = 150
+#libvirt相关配置
+libvirt_blocking = False
