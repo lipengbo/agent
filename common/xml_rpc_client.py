@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Filename:client.py
-# Date:Fri Jul 05 17:38:12 CST 2013
+# Filename:xml_rpc_client.py
+# Date:Mon Oct 21 00:06:51 CST 2013
 # Author:Pengbo Li
 # E-mail:lipengbo10054444@gmail.com
 import xmlrpclib

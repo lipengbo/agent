@@ -5,7 +5,7 @@
 # Author:Pengbo Li
 # E-mail:lipengbo10054444@gmail.com
 import sys
-from libs import excutils
+from common import utils
 from ovs import vswitch
 import getopt
 
@@ -49,7 +49,7 @@ def parse_parameter(argv):
 
 
 def genarate_dpid(out_if):
-    out, err = excutils.execute("ip link show %s | grep -i link/ether |awk '{print $2}'" % out_if)
+    out, err = utils.execute("ip link show %s | grep -i link/ether |awk '{print $2}'" % out_if)
     dpid = "ffff" + "".join(out.strip().split(":"))
     return dpid
 
@@ -61,14 +61,14 @@ def setup_ovs(out_if, out_br, local_ip, netmask, gateway):
     print result
     result = vswitch.ovs_vsctl_add_port_to_bridge(out_br, out_if)
     print result
-    excutils.execute("ifconfig %s 0 up" % out_if)
-    excutils.execute("ifconfig %s %s netmask %s up" % (out_br, local_ip, netmask))
-    out, err = excutils.execute("route -n")
+    utils.execute("ifconfig %s 0 up" % out_if)
+    utils.execute("ifconfig %s %s netmask %s up" % (out_br, local_ip, netmask))
+    out, err = utils.execute("route -n")
     for route in out.splitlines():
         if route.startswith("0.0.0.0"):
-            out, err = excutils.execute(
+            out, err = utils.execute(
                 "route del default dev %s" % route.split()[7])
-    excutils.execute("route add default gw %s" % gateway)
+    utils.execute("route add default gw %s" % gateway)
 
 
 if __name__ == '__main__':

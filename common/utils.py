@@ -8,23 +8,18 @@
 """
 System-level utilities and helper functions.
 """
-
+import sys
 import os
 import signal
-import re
 from eventlet.green import subprocess
 from eventlet import greenthread
 import random
 import log as logging
-LOG = logging.getLogger("agent.libs.excutils")
+LOG = logging.getLogger("agent")
 
 
 def abspath(path):
     return os.path.abspath(os.path.join(os.path.dirname(__file__), path))
-
-
-IPTABLES_BAK_FILE = abspath('../etc/iptables.bak')
-IP_BAK_FILE = abspath('../etc/ip.bak')
 
 
 class InvalidArgumentError(Exception):
@@ -58,21 +53,14 @@ class ProcessExecutionError(Exception):
         super(ProcessExecutionError, self).__init__(message)
 
 
-class NoRootWrapSpecified(Exception):
-
-    def __init__(self, message=None):
-        super(NoRootWrapSpecified, self).__init__(message)
-
-
 def import_class(import_str):
     """Returns a class from a string including module and class."""
     mod_str, _sep, class_str = import_str.rpartition('.')
     try:
         __import__(mod_str)
         return getattr(sys.modules[mod_str], class_str)
-    except (ImportError, ValueError, AttributeError), exc:
-        LOG.debug(_('Inner Exception: %s'), exc)
-        raise exception.ClassNotFound(class_name=class_str, exception=exc)
+    except (ImportError, ValueError, AttributeError):
+        raise Exception('Class not flund')
 
 
 def import_object(import_str):
@@ -85,11 +73,6 @@ def import_object(import_str):
         return cls()
 
 
-def fetchfile(url, target):
-    LOG.debug(_('Fetching %s') % url)
-    execute('curl', '--fail', url, '-o', target)
-
-
 def _subprocess_setup():
     # Python installs a SIGPIPE handler by default. This is usually not what
     # non-Python subprocesses expect.
@@ -98,10 +81,6 @@ def _subprocess_setup():
 
 def execute(*cmd, **kwargs):
     """Helper method to execute command with optional retry.
-
-    If you add a run_as_root=True command, don't forget to add the
-    corresponding filter to nova.rootwrap !
-
     :param cmd:                Passed to subprocess.Popen.
     :param process_input:      Send to opened process.
     :param check_exit_code:    Single bool, int, or list of allowed exit
@@ -112,9 +91,6 @@ def execute(*cmd, **kwargs):
                                True, wait a short amount of time
                                before retrying.
     :param attempts:           How many times to retry cmd.
-    :param run_as_root:        True | False. Defaults to False. If set to True,
-                               the command is prefixed by the command specified
-                               in the root_helper FLAG.
 
     :raises exception.Error: on receiving unknown arguments
     :raises exception.ProcessExecutionError:
@@ -133,21 +109,18 @@ def execute(*cmd, **kwargs):
         check_exit_code = [check_exit_code]
     delay_on_retry = kwargs.pop('delay_on_retry', True)
     attempts = kwargs.pop('attempts', 1)
-    run_as_root = kwargs.pop('run_as_root', False)
     shell = kwargs.pop('shell', False)
 
     if len(kwargs):
-        raise exception.Error(_('Got unknown keyword args '
-                                'to utils.execute: %r') % kwargs)
+        raise Exception(
+            'Got unknown keyword args to utils.execute: %r' % kwargs)
 
-    if run_as_root:
-        cmd = shlex.split(FLAGS.root_helper) + list(cmd)
     cmd = map(str, cmd)
 
     while attempts > 0:
         attempts -= 1
         try:
-            LOG.debug(_('Running cmd (subprocess): %s'), ' '.join(cmd))
+            LOG.debug('Running cmd (subprocess): %s' % ' '.join(cmd))
             _PIPE = subprocess.PIPE  # pylint: disable=E1101
             obj = subprocess.Popen(cmd,
                                    stdin=_PIPE,
@@ -163,26 +136,23 @@ def execute(*cmd, **kwargs):
             obj.stdin.close()  # pylint: disable=E1101
             _returncode = obj.returncode  # pylint: disable=E1101
             if _returncode:
-                LOG.debug(_('Result was %s') % _returncode)
+                LOG.debug('Result was %s' % _returncode)
                 if not ignore_exit_code and _returncode not in check_exit_code:
                     (stdout, stderr) = result
-                    raise exception.ProcessExecutionError(
-                            exit_code=_returncode,
-                            stdout=stdout,
-                            stderr=stderr,
-                            cmd=' '.join(cmd))
+                    raise ProcessExecutionError(
+                        exit_code=_returncode,
+                        stdout=stdout,
+                        stderr=stderr,
+                        cmd=' '.join(cmd))
             return result
-        except exception.ProcessExecutionError:
+        except ProcessExecutionError:
             if not attempts:
                 raise
             else:
-                LOG.debug(_('%r failed. Retrying.'), cmd)
+                LOG.debug('%r failed. Retrying.' % cmd)
                 if delay_on_retry:
                     greenthread.sleep(random.randint(20, 200) / 100.0)
         finally:
-            # NOTE(termie): this appears to be necessary to let the subprocess
-            #               call clean something up in between calls, without
-            #               it two execute calls in a row hangs the second one
             greenthread.sleep(0)
 
 
@@ -203,7 +173,7 @@ def trycmd(*args, **kwargs):
     try:
         out, err = execute(*args, **kwargs)
         failed = False
-    except exception.ProcessExecutionError, exn:
+    except ProcessExecutionError as exn:
         out, err = '', str(exn)
         LOG.debug(err)
         failed = True
@@ -218,19 +188,19 @@ def trycmd(*args, **kwargs):
 
 def ssh_execute(ssh, cmd, process_input=None,
                 addl_env=None, check_exit_code=True):
-    LOG.debug(_('Running cmd (SSH): %s'), ' '.join(cmd))
+    LOG.debug('Running cmd (SSH): %s' % ' '.join(cmd))
     if addl_env:
-        raise exception.Error(_('Environment not supported over SSH'))
+        raise Exception('Environment not supported over SSH')
 
     if process_input:
         # This is (probably) fixable if we need it...
-        raise exception.Error(_('process_input not supported over SSH'))
+        raise Exception('process_input not supported over SSH')
 
     stdin_stream, stdout_stream, stderr_stream = ssh.exec_command(cmd)
     channel = stdout_stream.channel
 
-    #stdin.write('process_input would go here')
-    #stdin.flush()
+    # stdin.write('process_input would go here')
+    # stdin.flush()
 
     # NOTE(justinsb): This seems suspicious...
     # ...other SSH clients have buffering issues with this approach
@@ -242,14 +212,15 @@ def ssh_execute(ssh, cmd, process_input=None,
 
     # exit_status == -1 if no exit code was returned
     if exit_status != -1:
-        LOG.debug(_('Result was %s') % exit_status)
+        LOG.debug('Result was %s' % exit_status)
         if check_exit_code and exit_status != 0:
-            raise exception.ProcessExecutionError(exit_code=exit_status,
-                                                  stdout=stdout,
-                                                  stderr=stderr,
-                                                  cmd=' '.join(cmd))
+            raise ProcessExecutionError(exit_code=exit_status,
+                                        stdout=stdout,
+                                        stderr=stderr,
+                                        cmd=' '.join(cmd))
 
     return (stdout, stderr)
+
 
 def utf8(value):
     """Try to turn a string into utf-8 if possible.
@@ -266,9 +237,3 @@ def generate_mac():
            random.randint(0x00, 0xff),
            random.randint(0x00, 0xff)]
     return ':'.join(map(lambda x: "%02x" % x, mac))
-
-if __name__ == '__main__':
-    out, err = execute("ls -al")
-    print err
-    print "------------------------"
-    print out

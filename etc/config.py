@@ -11,9 +11,6 @@
 compute_service = 1
 monitor_service = 1
 ovs_service = 0
-gateway_service = 0
-nat_service = 0
-dhcp_service = 0
 
 #[common]
 control_br = 'br1'
@@ -36,69 +33,9 @@ monitor_service_port = 8887
 ovs_service_port = 8889
 controller_bin_path = '/usr/local/floodloght/target'
 
-#[dhcp]
-dhcp_service_port = 8888
-
-#[gateway]
-gateway_service_bridge = data_br
-gateway_service_port = 8893
-
-#[nat]
-nat_service_bridge = data_br
-nat_service_port = 8894
-
 #[vt_manager]
 vt_manager_ip = '127.0.0.1'
 vt_manager_port = 8891
-
-#log相关配置
-#[log]
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': True,
-    'formatters': {
-        'standard': {
-            'format': '%(asctime)s [%(module)s.%(funcName)s:%(lineno)d] [%(levelname)s]- %(message)s'
-        },
-    },
-    'filters': {
-        'require_debug_false': {
-            '()': 'django.utils.log.RequireDebugFalse'
-        }
-    },
-    'handlers': {
-        'mail_admins': {
-            'level': 'ERROR',
-            'filters': ['require_debug_false'],
-            'class': 'django.utils.log.AdminEmailHandler'
-        },
-        'default': {
-            'level': 'DEBUG',
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': 'logs/ceni_agent.log',
-            'maxBytes': 1024 * 1024 * 5,
-            'backupCount': 5,
-            'formatter': 'standard',
-        },
-        'console': {
-            'level': 'DEBUG',
-            'class': 'logging.StreamHandler',
-            'formatter': 'standard',
-        },
-    },
-    'loggers': {
-        'django.request': {
-            'handlers': ['default', 'console'],
-            'level': 'DEBUG',
-            'propagate': True,
-        },
-        'agent': {
-            'handlers': ['default', 'console'],
-            'level': 'DEBUG',
-            'propagate': True,
-        },
-    }
-}
 
 #[Advance]
 import os

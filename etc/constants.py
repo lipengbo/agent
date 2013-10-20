@@ -8,7 +8,7 @@
 
 DOMAIN_STATE = {
     'nostate': 0,
-    "runnng": 1,
+    "running": 1,
     "blocked": 2,
     "paused": 3,
     "shutdown": 4,

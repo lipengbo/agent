@@ -95,7 +95,7 @@ class LibvirtConnection(object):
         vmInfo['mem'] = int(vmInfo['mem']) << 10
         vmInfo['type'] = config.domain_type
         libvirt_xml = open(config.libvirt_xml_template).read()
-        return Template(libvirt_xml, searchList=[vmInfo])
+        return str(Template(libvirt_xml, searchList=[vmInfo]))
 
     @staticmethod
     def prepare_interface_xml(interfaces):
@@ -103,7 +103,7 @@ class LibvirtConnection(object):
         interfaces is a list of interface
         """
         interface_xml = open(config.injected_network_template).read()
-        return Template(interface_xml, searchList=[{'interfaces': interfaces}])
+        return str(Template(interface_xml, searchList=[{'interfaces': interfaces}]))
 
     def create_vm(self, vmInfo, netInfo, key=None):
         """
@@ -118,6 +118,7 @@ class LibvirtConnection(object):
                 'hdd': imageSize 2G,
                 'dhcp': 1 or 0, 1 代表dhcp  0 代表静态注入
                 'glanceURL': glanceURL,
+                'vnc_port': vnc_port,
             }
         netInfo:
             {

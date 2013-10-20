@@ -9,7 +9,7 @@ from twisted.web import xmlrpc
 from virt.libvirtConn import LibvirtConnection
 from libs import rpcClient
 from libs import exception
-from libs import excutils
+from libs import utils
 from ovs import vswitch
 from etc import constants
 from etc import config
@@ -89,16 +89,16 @@ class ComputeManager(LibvirtConnection):
         bridge_port = 'b%s' % fix
         peer_port = 'p%s' % fix
         vswitch.ovs_vsctl_add_bridge(bridge_name)
-        #excutils.execute(['ip', 'link', 'add', bridge_port, 'type', 'veth', 'peer', 'name', peer_port])
-        #excutils.execute(['ip', 'link', 'set', bridge_port, 'up'])
-        #excutils.execute(['ip', 'link', 'set', peer_port, 'up'])
-        #excutils.execute(['ip', 'link', 'set', bridge_port, 'promisc', 'on'])
-        #excutils.execute(['ip', 'link', 'set', peer_port, 'promisc', 'on'])
-        excutils.execute('ip link add %s type veth peer name %s' % (bridge_port, peer_port))
-        excutils.execute('ip link set %s up' % bridge_port)
-        excutils.execute('ip link set %s up' % peer_port)
-        excutils.execute('ip link set %s promisc on' % bridge_port)
-        excutils.execute('ip link set %s promisc on' % peer_port)
+        #utils.execute(['ip', 'link', 'add', bridge_port, 'type', 'veth', 'peer', 'name', peer_port])
+        #utils.execute(['ip', 'link', 'set', bridge_port, 'up'])
+        #utils.execute(['ip', 'link', 'set', peer_port, 'up'])
+        #utils.execute(['ip', 'link', 'set', bridge_port, 'promisc', 'on'])
+        #utils.execute(['ip', 'link', 'set', peer_port, 'promisc', 'on'])
+        utils.execute('ip link add %s type veth peer name %s' % (bridge_port, peer_port))
+        utils.execute('ip link set %s up' % bridge_port)
+        utils.execute('ip link set %s up' % peer_port)
+        utils.execute('ip link set %s promisc on' % bridge_port)
+        utils.execute('ip link set %s promisc on' % peer_port)
         vswitch.ovs_vsctl_add_port_to_bridge(bridge_name, bridge_port)
         if vmtype == 0:
             bridge = config.control_br
@@ -112,8 +112,8 @@ class ComputeManager(LibvirtConnection):
         bridge_name = 'br%s' % fix
         bridge_port = 'b%s' % fix
         peer_port = 'p%s' % fix
-        #excutils.execute(['ip', 'link', 'del', bridge_port, 'type', 'veth', 'peer', 'name', peer_port])
-        excutils.execute('ip link del %s type veth peer name %s' % (bridge_port, peer_port))
+        #utils.execute(['ip', 'link', 'del', bridge_port, 'type', 'veth', 'peer', 'name', peer_port])
+        utils.execute('ip link del %s type veth peer name %s' % (bridge_port, peer_port))
         vswitch.ovs_vsctl_del_bridge(bridge_name)
         vswitch.ovs_vsctl_del_port(peer_port)
         return bridge_name

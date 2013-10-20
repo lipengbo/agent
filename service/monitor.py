@@ -10,7 +10,7 @@ import traceback
 from virtinst import util
 from virt.libvirtConn import LibvirtConnection
 from etc import config
-from libs import excutils
+from libs import utils
 import psutil
 from libs import log as logging
 LOG = logging.getLogger("agent.monitor")
@@ -107,9 +107,9 @@ class DomainMonitor(object):
 
     def get_disk_usage(self):
         diskStat = {}
-        total, err = excutils.execute(
+        total, err = utils.execute(
             "qemu-img info %s | grep -i 'disk size:'|awk '{print $3}'" % self.get_hdd()[0])
-        usage, err = excutils.execute(
+        usage, err = utils.execute(
             "qemu-img info %s | grep -i 'virtual size:'|awk '{print $3}'" % self.get_hdd()[0])
         diskStat['all'] = total.strip()
         diskStat['usage'] = usage.strip()

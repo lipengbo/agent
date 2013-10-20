@@ -8,7 +8,7 @@ import os
 import traceback
 import time
 import threading
-from libs import log as logging
+import log as logging
 LOG = logging.getLogger("agent")
 
 

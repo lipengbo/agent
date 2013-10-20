@@ -5,10 +5,11 @@
 # Author:Pengbo Li
 # E-mail:lipengbo10054444@gmail.com
 import os
+from common import utils
 
 
 def execute(*args, **kwargs):
-    return utils.execute(*args, **kwargs)
+    return utils.execute(shell=False, *args, **kwargs)
 
 
 def get_fs_info(path):
@@ -52,7 +53,7 @@ def get_disk_backing_file(path):
     return backing_file
 
 
-def create_cow_image(backing_file, path):
+def create_cow_image(backing_file, path, size_gb):
     """Create COW image
 
     Creates a COW image with the given backing file
@@ -60,4 +61,5 @@ def create_cow_image(backing_file, path):
     :param backing_file: Existing image on which to base the COW image
     :param path: Desired location of the COW image
     """
-    execute('qemu-img', 'create', '-f', 'qcow2', '-o', 'backing_file=%s' % backing_file, path)
+    size = '%sG' % size_gb
+    execute('qemu-img', 'create', '-f', 'qcow2', '-o', 'backing_file=%s' % backing_file, path, size)

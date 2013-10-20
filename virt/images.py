@@ -1,196 +1,184 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # Filename:images.py
-# Date:Mon May 27 21:25:23 CST 2013
+# Date:Mon Oct 21 02:24:03 CST 2013
 # Author:Pengbo Li
 # E-mail:lipengbo10054444@gmail.com
 """
-Utility methods to resize, repartition, and modify disk images.
-
-Includes injection of SSH keys into authorized_keys file,and
-
-network interface file
-
+Handling of VM disk images.
 """
-
 import os
-import tempfile
-import time
-from libs import excutils
-from libs import exception
-from etc import config
-import traceback
-from libs import log as logging
-LOG = logging.getLogger("agent.image")
+import re
+from common import log as logging
+from common import utils
+LOG = logging.getLogger('agent')
 
 
-def fetch_image(glanceURL, imageUUID):
-    image = os.path.join(config.image_path, imageUUID)
-    if not os.path.exists(image):
-        out, err = excutils.execute("wget -O %s %s" % (image, glanceURL))
-        if err:
-            return None
-    return image
+BYTE_MULTIPLIERS = {
+    '': 1,
+    't': 1024 ** 4,
+    'g': 1024 ** 3,
+    'm': 1024 ** 2,
+    'k': 1024,
+}
+BYTE_REGEX = re.compile(r'(^-?\d+)(\D*)')
 
 
-def create_image(glanceURL, imageUUID, vname, size, dhcp=1, net=None, key=None):
-    image = fetch_image(glanceURL, imageUUID)
-    if image:
-        instance_path = os.path.join(config.image_path, vname)
-        instance_image = os.path.join(config.image_path, vname, imageUUID)
-        try:
-            excutils.execute("mkdir -p %s" % instance_path)
-            excutils.execute("qemu-img create -f qcow2 -o backing_file=%s %s" % (image, instance_image))
-            if not dhcp:
-                try:
-                    inject_data(instance_image, net=net, key=key)
-                except:
-                    # try it again
-                    time.sleep(1)
-                    inject_data(instance_image, net=net, key=key)
-            return True
-        except:
-            LOG.error(traceback.print_exc())
-            excutils.execute("rm -rf %s" % instance_path)
-    return False
+def to_bytes(text, default=0):
+    """Converts a string into an integer of bytes.
 
+    Looks at the last characters of the text to determine
+    what conversion is needed to turn the input text into a byte number.
+    Supports "B, K(B), M(B), G(B), and T(B)". (case insensitive)
 
-def delete_image(vname):
-    instance_path = os.path.join(config.image_path, vname)
-    if os.path.exists(instance_path):
-        excutils.execute("rm -rf  %s" % instance_path)
-
-
-def extend(image, size):
-    """Increase image to size"""
-    file_size = os.path.getsize(image)
-    if file_size >= size:
-        return
-    excutils.execute('truncate -s %s %s' % (size, image))
-    # NOTE(vish): attempts to resize filesystem
-    excutils.execute('e2fsck -fp %s' % image, check_exit_code=False)
-    excutils.execute('resize2fs %s' % image, check_exit_code=False)
-
-
-NBD_MAX = 16
-_DEVICES = ['/dev/nbd%s' % i for i in xrange(NBD_MAX)]
-
-
-def inject_data(image, key=None, net=None, partition=None, nbd=True):
-    """Injects a ssh key and optionally net data into a disk image.
-
-    it will mount the image as a fully partitioned disk and attempt to inject
-    into the specified partition number.
-
-    If partition is not specified it mounts the image as a single partition.
+    :param text: String input for bytes size conversion.
+    :param default: Default return value when text is blank.
 
     """
-    device = _link_device(image, nbd)
-    try:
-        if partition:
-            out, err = excutils.execute('sudo kpartx -a %s' % device)
-            if err:
-                raise exception.Error('Failed to load partition: %s' % err)
-            mapped_device = '/dev/mapper/%sp%s' % (device.split('/')[-1],
-                                                   partition)
-        else:
-            mapped_device = '%sp1' % device
-        if not os.path.exists(mapped_device):
-            raise exception.Error(
-                'Mapped device was not found : %s' % mapped_device)
-        tmpdir = tempfile.mkdtemp()
-        try:
-            # mount loopback to dir
-            out, err = excutils.execute(
-                'sudo mount %s %s' % (mapped_device, tmpdir))
-            if err:
-                raise exception.Error('Failed to mount filesystem: %s' % err)
-
-            try:
-                if key:
-                    # inject key file
-                    _inject_key_into_fs(key, tmpdir)
-                if net:
-                    _inject_net_into_fs(net, tmpdir)
-            finally:
-                # unmount device
-                excutils.execute('sudo umount %s' % mapped_device)
-        finally:
-            # remove temporary directory
-            excutils.execute('rmdir %s' % tmpdir)
-            if not partition is None:
-                # remove partitions
-                excutils.execute('sudo kpartx -d %s' % device)
-    finally:
-        _unlink_device(device, nbd)
-
-
-def _link_device(image, nbd):
-    """Link image to device using loopback or nbd"""
-    if nbd:
-        device = _allocate_device()
-        excutils.execute('modprobe nbd max_part=%s' % NBD_MAX)
-        excutils.execute('sudo qemu-nbd -c %s %s' % (device, image))
-        for i in xrange(10):
-            if os.path.exists("/sys/block/%s/pid" % os.path.basename(device)):
-                return device
-            time.sleep(1)
-        raise exception.Error('nbd device %s did not show up' % device)
+    match = BYTE_REGEX.search(text)
+    if match:
+        magnitude = int(match.group(1))
+        mult_key_org = match.group(2)
+        if not mult_key_org:
+            return magnitude
+    elif text:
+        msg = 'Invalid string format: %s' % text
+        raise TypeError(msg)
     else:
-        out, err = excutils.execute('sudo losetup --find --show %s' % image)
-        if err:
-            raise exception.Error('Could not attach image to loopback: %s'
-                                  % err)
-        return out.strip()
+        return default
+    mult_key = mult_key_org.lower().replace('b', '', 1)
+    multiplier = BYTE_MULTIPLIERS.get(mult_key)
+    if multiplier is None:
+        msg = 'Unknown byte multiplier: %s' % mult_key_org
+        raise TypeError(msg)
+    return magnitude * multiplier
 
 
-def _unlink_device(device, nbd):
-    """Unlink image from device using loopback or nbd"""
-    if nbd:
-        excutils.execute('sudo qemu-nbd -d %s' % device)
-        _free_device(device)
-    else:
-        excutils.execute('sudo losetup --detach %s' % device)
+class QemuImgInfo(object):
+    BACKING_FILE_RE = re.compile((r"^(.*?)\s*\(actual\s+path\s*:"
+                                  r"\s+(.*?)\)\s*$"), re.I)
+    TOP_LEVEL_RE = re.compile(r"^([\w\d\s\_\-]+):(.*)$")
+    SIZE_RE = re.compile(r"\(\s*(\d+)\s+bytes\s*\)", re.I)
+
+    def __init__(self, cmd_output=None):
+        details = self._parse(cmd_output or '')
+        self.image = details.get('image')
+        self.backing_file = details.get('backing_file')
+        self.file_format = details.get('file_format')
+        self.virtual_size = details.get('virtual_size')
+        self.cluster_size = details.get('cluster_size')
+        self.disk_size = details.get('disk_size')
+        self.snapshots = details.get('snapshot_list', [])
+        self.encryption = details.get('encryption')
+
+    def __str__(self):
+        lines = [
+            'image: %s' % self.image,
+            'file_format: %s' % self.file_format,
+            'virtual_size: %s' % self.virtual_size,
+            'disk_size: %s' % self.disk_size,
+            'cluster_size: %s' % self.cluster_size,
+            'backing_file: %s' % self.backing_file,
+        ]
+        if self.snapshots:
+            lines.append("snapshots: %s" % self.snapshots)
+        return "\n".join(lines)
+
+    def _canonicalize(self, field):
+        # Standardize on underscores/lc/no dash and no spaces
+        # since qemu seems to have mixed outputs here... and
+        # this format allows for better integration with python
+        # - ie for usage in kwargs and such...
+        field = field.lower().strip()
+        for c in (" ", "-"):
+            field = field.replace(c, '_')
+        return field
+
+    def _extract_bytes(self, details):
+        # Replace it with the byte amount
+        real_size = self.SIZE_RE.search(details)
+        if real_size:
+            details = real_size.group(1)
+        try:
+            details = to_bytes(details)
+        except TypeError:
+            pass
+        return details
+
+    def _extract_details(self, root_cmd, root_details, lines_after):
+        real_details = root_details
+        if root_cmd == 'backing_file':
+            # Replace it with the real backing file
+            backing_match = self.BACKING_FILE_RE.match(root_details)
+            if backing_match:
+                real_details = backing_match.group(2).strip()
+        elif root_cmd in ['virtual_size', 'cluster_size', 'disk_size']:
+            # Replace it with the byte amount (if we can convert it)
+            real_details = self._extract_bytes(root_details)
+        elif root_cmd == 'file_format':
+            real_details = real_details.strip().lower()
+        elif root_cmd == 'snapshot_list':
+            # Next line should be a header, starting with 'ID'
+            if not lines_after or not lines_after[0].startswith("ID"):
+                msg = "Snapshot list encountered but no header found!"
+                raise ValueError(msg)
+            del lines_after[0]
+            real_details = []
+            # This is the sprintf pattern we will try to match
+            # "%-10s%-20s%7s%20s%15s"
+            # ID TAG VM SIZE DATE VM CLOCK (current header)
+            while lines_after:
+                line = lines_after[0]
+                line_pieces = line.split()
+                if len(line_pieces) != 6:
+                    break
+                # Check against this pattern in the final position
+                # "%02d:%02d:%02d.%03d"
+                date_pieces = line_pieces[5].split(":")
+                if len(date_pieces) != 3:
+                    break
+                real_details.append({
+                    'id': line_pieces[0],
+                    'tag': line_pieces[1],
+                    'vm_size': line_pieces[2],
+                    'date': line_pieces[3],
+                    'vm_clock': line_pieces[4] + " " + line_pieces[5],
+                })
+                del lines_after[0]
+        return real_details
+
+    def _parse(self, cmd_output):
+        contents = {}
+        lines = [x for x in cmd_output.splitlines() if x.strip()]
+        while lines:
+            line = lines.pop(0)
+            top_level = self.TOP_LEVEL_RE.match(line)
+            if top_level:
+                root = self._canonicalize(top_level.group(1))
+                if not root:
+                    continue
+                root_details = top_level.group(2).strip()
+                details = self._extract_details(root, root_details, lines)
+                contents[root] = details
+        return contents
 
 
-def _allocate_device():
-    while True:
-        if not _DEVICES:
-            raise exception.Error('No free nbd devices')
-        device = _DEVICES.pop()
-        if not os.path.exists("/sys/block/%s/pid" % os.path.basename(device)):
-            break
-    return device
+def qemu_img_info(path):
+    """Return an object containing the parsed output from qemu-img info."""
+    if not os.path.exists(path):
+        return QemuImgInfo()
+
+    out, err = utils.execute('env', 'LC_ALL=C', 'LANG=C',
+                             'qemu-img', 'info', path)
+    return QemuImgInfo(out)
 
 
-def _free_device(device):
-    _DEVICES.append(device)
+def convert_image(source, dest, out_format, run_as_root=False):
+    """Convert image to other format."""
+    cmd = ('qemu-img', 'convert', '-O', out_format, source, dest)
+    utils.execute(*cmd, run_as_root=run_as_root)
 
 
-def _inject_key_into_fs(key, fs):
-    """Add the given public ssh key to root's authorized_keys.
-
-    key is an ssh key string.
-    fs is the path to the base of the filesystem into which to inject the key.
-    """
-    sshdir = os.path.join(fs, 'root', '.ssh')
-    excutils.execute('sudo mkdir -p %s' %
-                     sshdir)  # existing dir doesn't matter
-    excutils.execute('sudo chown root %s' % sshdir)
-    excutils.execute('sudo chmod 700 %s' % sshdir)
-    keyfile = os.path.join(sshdir, 'authorized_keys')
-    excutils.execute('sudo tee -a %s' % keyfile, '\n' + key.strip() + '\n')
-
-
-def _inject_net_into_fs(net, fs):
-    """Inject /etc/network/interfaces into the filesystem rooted at fs.
-
-    net is the contents of /etc/network/interfaces.
-    """
-    netdir = os.path.join(os.path.join(fs, 'etc'), 'network')
-    excutils.execute('sudo mkdir -p %s' %
-                     netdir)  # existing dir doesn't matter
-    excutils.execute('sudo chown root:root %s' % netdir)
-    excutils.execute('sudo chmod 755 %s' % netdir)
-    netfile = os.path.join(netdir, 'interfaces')
-    excutils.execute('sudo tee %s' % netfile, net)
+def fetch(url, target):
+    LOG.debug('Fetching %s' % url)
+    utils.execute('curl', '--fail', url, '-o', target)
