@@ -109,7 +109,6 @@ def abspath(path):
 #高级配置项，一般情况下不用修改
 libvirt_xml_template = abspath('../virt/libvirt.xml.template')
 injected_network_template = abspath('../virt/interfaces.template')
-disk_type = 'qcow2'
 domain_type = 'kvm'
 image_path = '/var/lib/libvirt/images'
 rpc_connection_timeout = 150

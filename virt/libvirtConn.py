@@ -5,9 +5,8 @@
 # Author:Pengbo Li
 # E-mail:lipengbo10054444@gmail.com
 import libvirt
-from libvirt import virConnect
-import virtinst.util as util
-import traceback
+from eventlet import tpool
+from Cheetah.Template import Template
 from libs import log as logging
 from etc import config
 from virt import images
@@ -16,222 +15,95 @@ LOG = logging.getLogger("agent.virt")
 
 class LibvirtConnection(object):
 
-    def __init__(self, ipaddr="127.0.0.1", username=config.libvirt_user, passwd=config.libvirt_passwd):
-        self.__ipaddr = ipaddr
-        self.__username = username
-        self.__passwd = passwd
-        self.conn = self.get_conn()
+    def __init__(self):
+        self._conn = self._get_connection()
 
-    def __del__(self):
-        if isinstance(self.conn, virConnect):
-            self.conn.close()
+    def _get_connection(self, uri='qemu:///system'):
+        if config.libvirt_blocking:
+            self._conn = self._connect(uri)
+        else:
+            self._conn = tpool.proxy_call((
+                libvirt.virDomain, libvirt.virConnect), self._connect, uri)
+        return self._conn
 
-    def __tcp_connection(self, ipaddr, username, passwd):
-        def creds(credentials, user_data):
-            for credential in credentials:
-                if credential[0] == libvirt.VIR_CRED_AUTHNAME:
-                    credential[4] = username
-                    if len(credential[4]) == 0:
-                        credential[4] = credential[3]
-                elif credential[0] == libvirt.VIR_CRED_PASSPHRASE:
-                    credential[4] = passwd
-                else:
-                    return -1
-            return 0
-        flags = [libvirt.VIR_CRED_AUTHNAME, libvirt.VIR_CRED_PASSPHRASE]
-        auth = [flags, creds, None]
-        url = "qemu+tcp://" + ipaddr + "/system"
-        conn = libvirt.openAuth(url, auth, 0)
-        return conn
+    @staticmethod
+    def _connect(uri):
+        auth = [[libvirt.VIR_CRED_AUTHNAME, libvirt.VIR_CRED_NOECHOPROMPT],
+                'root',
+                None]
+        return libvirt.openAuth(uri, auth, 0)
 
-    def __connection(self, ipaddr):
-        url = "qemu://" + ipaddr + "/system"
-        conn = None
+    def list_instances(self):
+        instances = [self._conn.lookupByID(x).name() for x in self._conn.listDomainsID()]
+        instances.extends([x for x in self._conn.listDefineedDomains()])
+        return instances
+
+    def instance_exists(self, vname):
         try:
-            conn = libvirt.open(url)
+            self._conn.lookupByName(vname)
+            return True
         except libvirt.libvirtError:
-            LOG.debug(traceback.print_exc())
-        return conn
+            return False
 
-    def get_conn(self):
-        conn = None
-        try:
-            conn = self.__tcp_connection(self.__ipaddr, self.__username, self.__passwd)
-        except libvirt.libvirtError:
-            conn = self.__connection(self.__ipaddr)
-        return conn
+    def list_instances_detail(self):
+        infos = []
+        for domain_id in self._conn.listDomainsID():
+            domain = self._conn.lookupByID(domain_id)
+            (state, _max_mem, _mem, _num_cpu, _cpu_time) = domain.info()
+            infos.append((domain.name(), state))
+        return infos
 
-    def get_all_vm(self):
-        vname = {}
-        if self.conn:
-            for id in self.conn.listDomainsID():
-                id = int(id)
-                dom = self.conn.lookupByID(id)
-                vname[dom.name()] = dom.info()[0]
-            for name in self.conn.listDefinedDomains():
-                dom = self.conn.lookupByName(name)
-                vname[dom.name()] = dom.info()[0]
+    def get_instance_info(self, vname):
+        domain = self._conn.lookupByName(vname)
+        return domain.info()
+
+    def get_instance(self, vname):
+        vname = self.conn.lookupByName(vname)
         return vname
 
-    def get_emulator(self):
-        emulator = []
-        if self.conn:
-            xml = self.conn.getCapabilities()
-            arch = self.conn.getInfo()[0]
-            if arch == 'x86_64':
-                emulator.append(util.get_xml_path(
-                    xml, "/capabilities/guest[1]/arch/emulator"))
-                emulator.append(util.get_xml_path(
-                    xml, "/capabilities/guest[2]/arch/emulator"))
-            else:
-                emulator = util.get_xml_path(
-                    xml, "/capabilities/guest/arch/emulator")
-        return emulator
-
-    def get_machine(self):
-        machine = None
-        if self.conn:
-            xml = self.conn.getCapabilities()
-            machine = util.get_xml_path(xml, "/capabilities/guest/arch/machine/@canonical")
-        return machine
-
-    def get_dom(self, vname):
-        dom = self.conn.lookupByName(vname)
-        return dom
-
-    def get_power_state(self, vname):
-        dom = self.get_dom(vname)
-        if dom:
-            state = dom.isActive()
-            return state
-
     def get_xml(self, vname):
-        dom = self.get_dom(vname)
-        if dom:
-            xml = dom.XMLDesc(0)
-            xml_spl = xml.split('\n')
-            return xml_spl
-
-    def get_mem(self, vname):
-        dom = self.get_dom(vname)
-        if dom:
-            xml = dom.XMLDesc(0)
-            mem = util.get_xml_path(xml, "/domain/currentMemory")
-            mem = int(mem) << 10
-            return mem
-
-    def get_core(self, vname):
-        dom = self.get_dom(vname)
-        if dom:
-            xml = dom.XMLDesc(0)
-            cpu = util.get_xml_path(xml, "/domain/vcpu")
-            return cpu
-
-    def get_vnc(self, vname):
-        dom = self.get_dom(vname)
-        if dom:
-            xml = dom.XMLDesc(0)
-            vnc = util.get_xml_path(xml, "/domain/devices/graphics/@port")
-            return vnc
-
-    def get_hdd(self, vname):
-        dom = self.get_dom(vname)
-        if dom:
-            xml = dom.XMLDesc(0)
-            hdd_path = util.get_xml_path(
-                xml, "/domain/devices/disk[1]/source/@file")
-            hdd_fmt = util.get_xml_path(
-                xml, "/domain/devices/disk[1]/driver/@type")
-            size = dom.blockInfo(hdd_path, 0)[0]
-            # image = re.sub('\/.*\/', '', hdd_path)
-            return hdd_path, size, hdd_fmt
-
-    def get_arch(self, vname):
-        dom = self.get_dom(vname)
-        if dom:
-            xml = dom.XMLDesc(0)
-            arch = util.get_xml_path(xml, "/domain/os/type/@arch")
-            return arch
-
-    def get_nic(self, vname):
-        dom = self.get_dom(vname)
-        if dom:
-            xml = dom.XMLDesc(0)
-            mac = util.get_xml_path(
-                xml, "/domain/devices/interface/mac/@address")
-            nic = util.get_xml_path(
-                xml, "/domain/devices/interface/source/@network")
-            if nic is None:
-                nic = util.get_xml_path(
-                    xml, "/domain/devices/interface/source/@bridge")
-            return mac, nic
-
-    def get_nic_target(self, vname):
-        dom = self.get_dom(vname)
-        if dom:
-            xml = dom.XMLDesc(0)
-            target = util.get_xml_path(xml, '/domain/devices/interface/target/@dev')
-            return target
+        dom = self.get_instance(vname)
+        xml = dom.XMLDesc(0)
+        xml_spl = xml.split('\n')
+        return xml_spl
 
     def autostart(self, vname):
-        dom = self.get_dom(vname)
-        if dom:
-            return dom.autostart()
+        dom = self.get_instance(vname)
+        return dom.autostart()
 
     def get_state(self, vname):
-        dom = self.get_dom(vname)
-        if dom:
-            return dom.info()[0]
+        dom = self.get_instance(vname)
+        return dom.info()[0]
 
     def do_action(self, vname, action):
-        dom = self.get_dom(vname)
-        op_supported = ('create', 'suspend', 'undefine', 'resume', 'destroy')
-        if action in op_supported:
-            getattr(dom, action)()
-        else:
-            from libs.exception import ActionError
-            raise ActionError("domain only contains action= %s" % action)
+        dom = self.get_instance(vname)
+        #op_supported = ('create', 'suspend', 'undefine', 'resume', 'destroy')
+        getattr(dom, action)()
 
-    def to_xml(self, vmInfo):
+    @staticmethod
+    def prepare_libvirt_xml(vmInfo):
         """
         vmInfo:
             {
                 'name': name,
                 'mem': mem,
                 'cpus': cpus,
-                'img': img,
-                'bridge': bridge,
-                'mac': mac,
+                'vnc_port': vnc_port,
+                'nics': nic, nic.name  nic.bridge_name  nic.mac_address
             }
         """
-        vmInfo['arch'] = self.conn.getInfo()[0]
-        if vmInfo['arch'] == 'x86_64':
-            vmInfo['emulator'] = self.get_emulator()[1]
-        else:
-            vmInfo['emulator'] = self.get_emulator()
-        vmInfo['machine'] = self.get_machine()
         vmInfo['mem'] = int(vmInfo['mem']) << 10
-        vmInfo['domain_type'] = config.domain_type
-        vmInfo['disk_type'] = config.disk_type
-        vmInfo['target_port'] = vmInfo['name'][0:8]
-        with open(config.libvirt_xml_template) as f:
-            xml = f.read()
-        return xml % vmInfo
+        vmInfo['type'] = config.domain_type
+        libvirt_xml = open(config.libvirt_xml_template).read()
+        return Template(libvirt_xml, searchList=[vmInfo])
 
-    def to_interface_xml(self, netInfo):
+    @staticmethod
+    def prepare_interface_xml(interfaces):
         """
-        netInfo:
-            {
-                'ip': address,
-                'netmask': netmask,
-                'broadcast': broadcast,
-                'gateway': gateway,
-                'dns': dns,
-            }
+        interfaces is a list of interface
         """
-        with open(config.injected_network_template) as f:
-            xml = f.read()
-        return xml % netInfo
+        interface_xml = open(config.injected_network_template).read()
+        return Template(interface_xml, searchList=[{'interfaces': interfaces}])
 
     def create_vm(self, vmInfo, netInfo, key=None):
         """
@@ -256,9 +128,9 @@ class LibvirtConnection(object):
                 'dns': dns,
             }
         """
-        netXml = self.to_interface_xml(netInfo)
+        netXml = self.prepare_interface_xml(netInfo)
         images.create_image(vmInfo['glanceURL'], vmInfo['img'], vmInfo['name'], vmInfo['hdd'], vmInfo['dhcp'], net=netXml, key=key)
-        domainXml = self.to_xml(vmInfo)
+        domainXml = self.prepare_libvirt_xml(vmInfo)
         self.conn.defineXML(domainXml)
 
     def delete_vm(self, vname):
@@ -266,3 +138,15 @@ class LibvirtConnection(object):
             self.do_action(vname, 'destroy')
         self.do_action(vname, 'undefine')
         images.delete_image(vname)
+
+
+class LibvirtOpenVswitchDriver(object):
+
+    def get_dev_name(_self, iface_id):
+        return iface_id[0:8]
+
+    def plug(self, instance, network):
+        pass
+
+    def unplug(self, instance, network, mapping):
+        pass

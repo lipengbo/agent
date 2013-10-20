@@ -1,37 +1,34 @@
-<domain type='%(domain_type)s'>
-        <name>%(name)s</name>
-        <uuid>%(name)s</uuid>
-        <memory>%(mem)s</memory>
-        <currentMemory>%(mem)s</currentMemory>
-        <vcpu>%(cpus)s</vcpu>
-        <os>
-                <type arch='%(arch)s' machine='%(machine)s'>hvm</type>
-                <boot dev='hd'/>
-                <boot dev='cdrom'/>
-                <bootmenu enable='yes'/>
-        </os>
-        <features>
-                <acpi/>
-                <apic/>
-                <pae/>
-        </features>
-        <clock offset='utc'/>
-        <on_poweroff>destroy</on_poweroff>
-        <on_reboot>restart</on_reboot>
-        <on_crash>restart</on_crash>
-        <devices>
-                <emulator>%(emulator)s</emulator>
-                <disk type='file' device='disk'>
-                        <driver name='qemu' type='%(disk_type)s'/>
-                        <source file='/var/lib/libvirt/images/%(name)s/%(img)s'/>
-                        <target dev='vda' bus='virtio'/>
-                </disk>
-                <interface type='bridge'>
-                        <source bridge='%(bridge)s'/>
-                        <mac address='%(mac)s'/>
-                        <virtualport type='openvswitch'></virtualport>
-                        <target dev='%(target_port)s'/>
-                </interface>
-                <graphics type='vnc' port='%(vnc_port)s' listen='0.0.0.0'/>
-        </devices>
+<domain type='${type}'>
+    <uuid>${name}</uuid>
+    <name>${name}</name>
+    <memory>${mem}</memory>
+    <vcpu>${cpus}</vcpu>
+    <os>
+        <type>hvm</type>
+        <boot dev="hd" />
+        <boot dev="cdrom" />
+        <bootmenu enable='yes'/>
+    </os>
+    <features>
+        <acpi/>
+        <apic/>
+        <pae/>
+    </features>
+    <devices>
+        #set $root_disk_bus = 'virtio'
+        <disk type='file' device='disk'>
+            <driver type='qcow2'/>
+            <source file='${basepath}/disk'/>
+            <target dev='vda' bus='${root_disk_bus}'/>
+        </disk>
+#for $nic in $nics
+        <interface type='bridge'>
+            <source bridge='${nic.bridge_name}'/>
+            <mac address='${nic.mac_address}'/>
+            <virtualport type="openvswitch"></virtualport>
+            <target dev='${nic.name}'/>
+        </interface>
+#end for
+        <graphics type='vnc' port='${vnc_port}' listen='0.0.0.0'/>
+    </devices>
 </domain>

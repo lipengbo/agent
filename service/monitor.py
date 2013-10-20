@@ -8,7 +8,7 @@ import time
 import libvirt
 import traceback
 from virtinst import util
-from virt import libvirtConn
+from virt.libvirtConn import LibvirtConnection
 from etc import config
 from libs import excutils
 import psutil
@@ -16,19 +16,20 @@ from libs import log as logging
 LOG = logging.getLogger("agent.monitor")
 
 
-class HostMonitor(libvirtConn.LibvirtConnection):
+class HostMonitor(object):
 
     def __init__(self):
         super(HostMonitor, self).__init__()
-
-    def __del__(self):
-        super(HostMonitor, self).__del__()
+        self.conn = None
 
     def get_info(self):
         try:
             info = {}
-            arch = self.conn.getInfo()[0]
-            vcpus = self.conn.getInfo()[2]
+            if self.connection is None:
+                self.connection = LibvirtConnection()
+            conn_info = self.conn.getInfo()
+            arch = conn_info[0]
+            vcpus = conn_info[2]
             xml_inf = self.conn.getSysinfo(0)
             cpu_Hz = util.get_xml_path(xml_inf, "/sysinfo/processor/entry[6]")
             info['cpu'] = "%s %s %s" % (arch, vcpus, cpu_Hz)
@@ -71,21 +72,12 @@ class HostMonitor(libvirtConn.LibvirtConnection):
         return {'cpu': cpuusage, 'mem': memusage, 'disk': diskusage, 'net': netusage}
 
 
-class DomainMonitor(libvirtConn.LibvirtConnection):
+class DomainMonitor(object):
 
     def __init__(self, vname):
         super(DomainMonitor, self).__init__()
-        self.vname = vname
-
-    def __del__(self):
-        super(DomainMonitor, self).__del__()
-
-    def get_info(self):
-        info = {}
-        info['mem'] = '%s' % self.get_mem()
-        info['cpu'] = '%s' % self.get_core()
-        info['hdd'] = '%s' % (self.get_hdd()[1] >> 30)
-        return info
+        self.conn = LibvirtConnection()._conn
+        self.dom = self.conn.get_instance(vname)
 
     def get_cpu_usage(self):
         try:

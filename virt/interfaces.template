@@ -1,3 +1,5 @@
+# Injected by agent when vm created
+#
 # This file describes the network interfaces available on your system
 # and how to activate them. For more information, see interfaces(5).
 
@@ -5,13 +7,14 @@
 auto lo
 iface lo inet loopback
 
-# The primary network interface
-auto eth0
-iface eth0 inet static
-        address %(ip)s
-        netmask %(netmask)s
-        broadcast %(broadcast)s
-        gateway %(gateway)s
-        dns-nameservers %(dns)s
-
-
+#for $ifc in $interfaces
+auto ${ifc.name}
+iface ${ifc.name} inet static
+        address ${ifc.address}
+        netmask ${ifc.netmask}
+        broadcast ${ifc.broadcast}
+        gateway ${ifc.gateway}
+#if $ifc.dns
+        dns-nameservers ${ifc.dns}
+#end if
+#end for
