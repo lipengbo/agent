@@ -8,8 +8,6 @@ import traceback
 from twisted.web import xmlrpc
 from virt.libvirtConn import LibvirtConnection
 from common import xml_rpc_client
-from common import utils
-from ovs import vswitch
 from etc import constants
 from etc import config
 from common import log as logging
@@ -18,15 +16,12 @@ MUTEX = threading.Lock()
 LOG = logging.getLogger("agent")
 
 
-class ComputeManager(LibvirtConnection):
+class ComputeManager(object):
 
     def __init__(self):
-        super(ComputeManager, self).__init__()
+        self.conn = LibvirtConnection()
 
-    def __del__(self):
-        super(ComputeManager, self).__del__()
-
-    def create_vm_workflow(self, vmInfo, netInfo):
+    def create_domain(self, vmInfo, interfaces, files=None, key=None):
         """
         vmInfo:
             {
@@ -34,89 +29,28 @@ class ComputeManager(LibvirtConnection):
                 'mem': mem,
                 'cpus': cpus,
                 'img': imageUUID,
-                'mac': mac,
-                'hdd': imageSize 2G,
-                'dhcp': 1 or 0,
+                'hdd': imageSize 2,
                 'glanceURL': glanceURL,
-                'type':0/1/2 0 controller 1 slice 2 gateway
+                'vnc_port': vnc_port,
+                'nics': [{'bridge_name': bridge1, 'mac_address': mac1}, {'bridge_name': bridge2, 'mac_address': mac2}],
+                'type': 0 for controller; 1 for vm; 2 for gateway
             }
-        netInfo:
-            {
-                'ip': address,
-                'netmask': netmask,
-                'broadcast': broadcast,
-                'gateway': gateway,
-                'dns': dns,
-            }
+        'interfaces' = [
+                        {'name': dev_name, 'address': address, 'netmask': netmask, 'broadcast':broadcast, 'gateway': gateway, 'dns': dns},
+                        {'name': dev_name, 'address': address, 'netmask': netmask, 'broadcast':broadcast, 'gateway': gateway, 'dns': dns}
+                        ]
         """
-        MUTEX.acquire()
-        try:
-            vmInfo['bridge'] = self.prepare_link(vmInfo['name'], vmInfo['type'])
-            if not vmInfo['bridge']:
-                raise exception.PrepareLinkError()
-            self.create_vm(vmInfo, netInfo)
-            self.set_domain_state(vmInfo['name'], constants.DOMAIN_STATE['nostate'])
-            return True
-        except:
-            print traceback.print_exc()
-            self.del_prepare_link(vmInfo['name'])
-            self.set_domain_state(vmInfo['name'], constants.DOMAIN_STATE['failed'])
-            return False
-        finally:
-            MUTEX.release()
+        self.conn.create_vm(vmInfo=vmInfo, interfaces=interfaces, files=files, key=key)
 
-    def delete_vm_workflow(self, vname):
-        try:
-            self.delete_vm(vname)
-        except:
-            LOG.error(traceback.print_exc())
-        try:
-            self.del_prepare_link(vname)
-        except:
-            LOG.error(traceback.print_exc())
-        return True
+    def delete_domain(self, vname):
+        self.conn.delete_vm(vname)
 
-    def set_domain_state(self, vname, state):
+    def _set_domain_state(self, vname, state):
         try:
             client = xml_rpc_client.get_rpc_client(config.vt_manager_ip, config.vt_manager_port)
             client.set_domain_state(vname, state)
         except:
             LOG.error(traceback.print_exc())
-
-    def prepare_link(self, vname, vmtype):
-        fix = vname[0:8]
-        bridge_name = 'br%s' % fix
-        bridge_port = 'b%s' % fix
-        peer_port = 'p%s' % fix
-        vswitch.ovs_vsctl_add_bridge(bridge_name)
-        #utils.execute(['ip', 'link', 'add', bridge_port, 'type', 'veth', 'peer', 'name', peer_port])
-        #utils.execute(['ip', 'link', 'set', bridge_port, 'up'])
-        #utils.execute(['ip', 'link', 'set', peer_port, 'up'])
-        #utils.execute(['ip', 'link', 'set', bridge_port, 'promisc', 'on'])
-        #utils.execute(['ip', 'link', 'set', peer_port, 'promisc', 'on'])
-        utils.execute('ip link add %s type veth peer name %s' % (bridge_port, peer_port))
-        utils.execute('ip link set %s up' % bridge_port)
-        utils.execute('ip link set %s up' % peer_port)
-        utils.execute('ip link set %s promisc on' % bridge_port)
-        utils.execute('ip link set %s promisc on' % peer_port)
-        vswitch.ovs_vsctl_add_port_to_bridge(bridge_name, bridge_port)
-        if vmtype == 0:
-            bridge = config.control_br
-        else:
-            bridge = config.data_br
-        vswitch.ovs_vsctl_add_port_to_bridge(bridge, peer_port)
-        return bridge_name
-
-    def del_prepare_link(self, vname):
-        fix = vname[0:8]
-        bridge_name = 'br%s' % fix
-        bridge_port = 'b%s' % fix
-        peer_port = 'p%s' % fix
-        #utils.execute(['ip', 'link', 'del', bridge_port, 'type', 'veth', 'peer', 'name', peer_port])
-        utils.execute('ip link del %s type veth peer name %s' % (bridge_port, peer_port))
-        vswitch.ovs_vsctl_del_bridge(bridge_name)
-        vswitch.ovs_vsctl_del_port(peer_port)
-        return bridge_name
 
 
 class ComputeService(xmlrpc.XMLRPC):
@@ -128,13 +62,6 @@ class ComputeService(xmlrpc.XMLRPC):
     def render(self, request):
         self.request = request
         return xmlrpc.XMLRPC.render(self, request)
-
-    def xmlrpc_get_domain_vnc(self, vname):
-        conn = LibvirtConnection()
-        port = conn.get_vnc(vname)
-        if port:
-            return '%s' % port
-        return False
 
     def xmlrpc_get_domain_state(self, vname):
         conn = LibvirtConnection()
@@ -157,20 +84,16 @@ class ComputeService(xmlrpc.XMLRPC):
                 'mem': mem,
                 'cpus': cpus,
                 'img': imageUUID,
-                'mac': mac,
-                'hdd': imageSize 2G,
-                'dhcp': 1 or 0,
+                'hdd': imageSize 2,
                 'glanceURL': glanceURL,
-                'type':0/1/2 0 controller 1 slice 2 gateway
+                'vnc_port': vnc_port,
+                'nics': [{'bridge_name': bridge1, 'mac_address': mac1}, {'bridge_name': bridge2, 'mac_address': mac2}],
+                'type': 0 for controller; 1 for vm; 2 for gateway
             }
-        netInfo:
-            {
-                'ip': address,
-                'netmask': netmask,
-                'broadcast': broadcast,
-                'gateway': gateway,
-                'dns': dns,
-            }
+        'interfaces' = [
+                        {'name': dev_name, 'address': address, 'netmask': netmask, 'broadcast':broadcast, 'gateway': gateway, 'dns': dns},
+                        {'name': dev_name, 'address': address, 'netmask': netmask, 'broadcast':broadcast, 'gateway': gateway, 'dns': dns}
+                        ]
         """
         create_vm_func = ComputeManager().create_vm_workflow
         t1 = threading.Thread(target=create_vm_func, args=(vmInfo, netInfo))

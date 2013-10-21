@@ -180,8 +180,11 @@ def convert_image(source, dest, out_format, run_as_root=False):
 
 
 def fetch(url, target):
-    LOG.debug('Fetching %s' % url)
-    return utils.execute('curl', '--fail', url, '-o', target)
+    if os.path.exists(target):
+        LOG.debug('Image %s has been exists' % target)
+    else:
+        LOG.debug('Fetching %s' % url)
+        return utils.execute('curl', '--fail', url, '-o', target)
 
 
 def get_disk_backing_file(path):

@@ -4,14 +4,20 @@
 # Date:Mon May 27 21:18:13 CST 2013
 # Author:Pengbo Li
 # E-mail:lipengbo10054444@gmail.com
+import os
 import libvirt
+import shutil
 from eventlet import tpool
 from Cheetah.Template import Template
-from libs import log as logging
 from etc import config
 from virt import images
 from virt import utils
+from virt.disk import api as disk_api
+from virt.vif import LibvirtOpenVswitchDriver
+import exception
+from common import log as logging
 LOG = logging.getLogger("agent.virt")
+VM_TYPE = {'controller': 0, 'slice_vm': 1, 'gateway': 2}
 
 
 class LibvirtConnection(object):
@@ -129,31 +135,73 @@ class LibvirtConnection(object):
                         {'name': dev_name, 'address': address, 'netmask': netmask, 'broadcast':broadcast, 'gateway': gateway, 'dns': dns}
                         ]
         """
-        #step 1: fetch image from glance
+        #step 0: data prepare
         image_url = vmInfo.pop('glanceURL')
         image_uuid = vmInfo.pop('img')
-        target_image = config.image_path + image_uuid
-        out, err = images.fetch(image_url, target_image)
-        if err:
-            raise Exception('Download image=%s failed' % image_uuid)
+        disk_size = vmInfo.pop('hdd')
+        vm_type = vmInfo.pop('type')
+        #step 1: fetch image from glance
+        try:
+            target_image = config.image_path + image_uuid
+            out, err = images.fetch(image_url, target_image)
+            if err:
+                raise exception.DownloadImageException(image_uuid=image_uuid)
+        except:
+            if os.path.exists(target_image):
+                shutil.rmtree(target_image)
+            raise
         #step 2: create image for vm
-        vm_home = config.image_path + vmInfo['name']
-        utils.execute('mkdir', '-p', vm_home)
-        vm_image = vm_home + '/disk'
-        disk_size = vmInfo['hdd']
-        out, err = images.create_cow_image(target_image, vm_image, disk_size)
-        if err:
-            utils.execute('rm', '-rf', vm_home)
-            raise Exception('Download image=%s failed' % image_uuid)
+        try:
+            vm_home = config.image_path + vmInfo['name']
+            utils.execute('mkdir', '-p', vm_home)
+            vm_image = vm_home + '/disk'
+            out, err = images.create_cow_image(target_image, vm_image, disk_size)
+            if err:
+                raise exception.CreateImageException(instance_id=vmInfo['name'])
+        except:
+            if os.path.exists(vm_home):
+                shutil.rmtree(vm_home)
+            raise
         #step 3: inject data into vm
-        netXml = self.prepare_interface_xml(interfaces)
+        try:
+            if (vm_type != VM_TYPE['slice_vm']) and interfaces:
+                netXml = self.prepare_interface_xml(interfaces)
+                disk_api.inject_data(vm_image, net=netXml, partition=1)
+            if vm_type == VM_TYPE['gateway']:
+                LOG.debug('inject dhcp data into gateway')
+        except:
+            if os.path.exists(vm_home):
+                shutil.rmtree(vm_home)
+            raise
         #step 4: prepare link for binding to ovs
+        ovs_driver = LibvirtOpenVswitchDriver()
+        try:
+            ovs_driver.plug(vmInfo['name'], vm_type)
+        except:
+            if os.path.exists(vm_home):
+                shutil.rmtree(vm_home)
+            ovs_driver.unplug(vmInfo['name'])
+            raise
         #step 5: define network
-        domainXml = self.prepare_libvirt_xml(vmInfo)
-        self.conn.defineXML(domainXml)
+        try:
+            domainXml = self.prepare_libvirt_xml(vmInfo)
+            self.conn.defineXML(domainXml)
+        except:
+            if os.path.exists(vm_home):
+                shutil.rmtree(vm_home)
+            ovs_driver.unplug(vmInfo['name'])
+            raise
 
     def delete_vm(self, vname):
+        #step 0: stop vm
         if self.get_state(vname) != 5:
             self.do_action(vname, 'destroy')
+        #step 1: undefine vm
         self.do_action(vname, 'undefine')
-        images.delete_image(vname)
+        #step 2: delete virtual interface
+        ovs_driver = LibvirtOpenVswitchDriver()
+        ovs_driver.unplug('vname')
+        #step 3: clean vm image, delete vm_home
+        vm_home = config.image_path + vname
+        if os.path.exists(vm_home):
+            shutil.rmtree(vm_home)
