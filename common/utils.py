@@ -8,6 +8,7 @@
 """
 System-level utilities and helper functions.
 """
+import traceback
 import sys
 import os
 import signal
@@ -59,18 +60,35 @@ def import_class(import_str):
     try:
         __import__(mod_str)
         return getattr(sys.modules[mod_str], class_str)
-    except (ImportError, ValueError, AttributeError):
-        raise Exception('Class not flund')
+    except (ValueError, AttributeError):
+        raise ImportError('Class %s cannot be found (%s)' %
+                          (class_str,
+                           traceback.format_exception(*sys.exc_info())))
 
 
-def import_object(import_str):
-    """Returns an object including a module or module and class."""
+def import_object(import_str, *args, **kwargs):
+    """Import a class and return an instance of it."""
+    return import_class(import_str)(*args, **kwargs)
+
+
+def import_object_ns(name_space, import_str, *args, **kwargs):
+    """Tries to import object from default namespace.
+
+    Imports a class and return an instance of it, first by trying
+    to find the class in a default namespace, then failing back to
+    a full path if not found in the default namespace.
+    """
+    import_value = "%s.%s" % (name_space, import_str)
     try:
-        __import__(import_str)
-        return sys.modules[import_str]
+        return import_class(import_value)(*args, **kwargs)
     except ImportError:
-        cls = import_class(import_str)
-        return cls()
+        return import_class(import_str)(*args, **kwargs)
+
+
+def import_module(import_str):
+    """Import a module."""
+    __import__(import_str)
+    return sys.modules[import_str]
 
 
 def _subprocess_setup():
@@ -109,7 +127,8 @@ def execute(*cmd, **kwargs):
         check_exit_code = [check_exit_code]
     delay_on_retry = kwargs.pop('delay_on_retry', True)
     attempts = kwargs.pop('attempts', 1)
-    shell = kwargs.pop('shell', False)
+    shell = kwargs.pop('shell', True)
+    kwargs.pop('run_as_root', True)
 
     if len(kwargs):
         raise Exception(

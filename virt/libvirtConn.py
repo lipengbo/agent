@@ -10,6 +10,7 @@ from Cheetah.Template import Template
 from libs import log as logging
 from etc import config
 from virt import images
+from virt import utils
 LOG = logging.getLogger("agent.virt")
 
 
@@ -89,11 +90,11 @@ class LibvirtConnection(object):
                 'mem': mem,
                 'cpus': cpus,
                 'vnc_port': vnc_port,
-                'nics': nic, nic.name  nic.bridge_name  nic.mac_address
+                'nics': [{'bridge_name': bridge1, 'mac_address': mac1}, {'bridge_name': bridge2, 'mac_address': mac2}]
             }
         """
         vmInfo['mem'] = int(vmInfo['mem']) << 10
-        vmInfo['type'] = config.domain_type
+        vmInfo['basepath'] = config.image_path + vmInfo['name']
         libvirt_xml = open(config.libvirt_xml_template).read()
         return str(Template(libvirt_xml, searchList=[vmInfo]))
 
@@ -101,11 +102,15 @@ class LibvirtConnection(object):
     def prepare_interface_xml(interfaces):
         """
         interfaces is a list of interface
+            'interfaces' = [
+                           {'name': dev_name, 'address': address, 'netmask': netmask, 'broadcast':broadcast, 'gateway': gateway, 'dns': dns},
+                           {'name': dev_name, 'address': address, 'netmask': netmask, 'broadcast':broadcast, 'gateway': gateway, 'dns': dns}
+                           ]
         """
         interface_xml = open(config.injected_network_template).read()
         return str(Template(interface_xml, searchList=[{'interfaces': interfaces}]))
 
-    def create_vm(self, vmInfo, netInfo, key=None):
+    def create_vm(self, vmInfo, interfaces, files=None, key=None):
         """
         vmInfo:
             {
@@ -113,24 +118,37 @@ class LibvirtConnection(object):
                 'mem': mem,
                 'cpus': cpus,
                 'img': imageUUID,
-                'bridge': bridge,
-                'mac': mac,
-                'hdd': imageSize 2G,
-                'dhcp': 1 or 0, 1 代表dhcp  0 代表静态注入
+                'hdd': imageSize 2,
                 'glanceURL': glanceURL,
                 'vnc_port': vnc_port,
+                'nics': [{'bridge_name': bridge1, 'mac_address': mac1}, {'bridge_name': bridge2, 'mac_address': mac2}],
+                'type': 0 for controller; 1 for vm; 2 for gateway
             }
-        netInfo:
-            {
-                'ip': address,
-                'netmask': netmask,
-                'broadcast': broadcast,
-                'gateway': gateway,
-                'dns': dns,
-            }
+        'interfaces' = [
+                        {'name': dev_name, 'address': address, 'netmask': netmask, 'broadcast':broadcast, 'gateway': gateway, 'dns': dns},
+                        {'name': dev_name, 'address': address, 'netmask': netmask, 'broadcast':broadcast, 'gateway': gateway, 'dns': dns}
+                        ]
         """
-        netXml = self.prepare_interface_xml(netInfo)
-        images.create_image(vmInfo['glanceURL'], vmInfo['img'], vmInfo['name'], vmInfo['hdd'], vmInfo['dhcp'], net=netXml, key=key)
+        #step 1: fetch image from glance
+        image_url = vmInfo.pop('glanceURL')
+        image_uuid = vmInfo.pop('img')
+        target_image = config.image_path + image_uuid
+        out, err = images.fetch(image_url, target_image)
+        if err:
+            raise Exception('Download image=%s failed' % image_uuid)
+        #step 2: create image for vm
+        vm_home = config.image_path + vmInfo['name']
+        utils.execute('mkdir', '-p', vm_home)
+        vm_image = vm_home + '/disk'
+        disk_size = vmInfo['hdd']
+        out, err = images.create_cow_image(target_image, vm_image, disk_size)
+        if err:
+            utils.execute('rm', '-rf', vm_home)
+            raise Exception('Download image=%s failed' % image_uuid)
+        #step 3: inject data into vm
+        netXml = self.prepare_interface_xml(interfaces)
+        #step 4: prepare link for binding to ovs
+        #step 5: define network
         domainXml = self.prepare_libvirt_xml(vmInfo)
         self.conn.defineXML(domainXml)
 
@@ -139,15 +157,3 @@ class LibvirtConnection(object):
             self.do_action(vname, 'destroy')
         self.do_action(vname, 'undefine')
         images.delete_image(vname)
-
-
-class LibvirtOpenVswitchDriver(object):
-
-    def get_dev_name(_self, iface_id):
-        return iface_id[0:8]
-
-    def plug(self, instance, network):
-        pass
-
-    def unplug(self, instance, network, mapping):
-        pass

@@ -1,51 +1,38 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
-# Copyright 2012 Red Hat, Inc.
-#
-# Licensed under the Apache License, Version 2.0 (the "License"); you may
-# not use this file except in compliance with the License. You may obtain
-# a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-# License for the specific language governing permissions and limitations
-# under the License.
-
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import importutils
-from nova.openstack.common import log as logging
-
-LOG = logging.getLogger(__name__)
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# Filename:api.py
+# Date:Mon Oct 21 10:17:50 CST 2013
+# Author:Pengbo Li
+# E-mail:lipengbo10054444@gmail.com
+from common.utils import import_module, import_object
+from common import log as logging
+LOG = logging.getLogger('agent')
 
 
 class VFS(object):
 
     @staticmethod
     def instance_for_image(imgfile, imgfmt, partition):
-        LOG.debug(_("Instance for image imgfile=%(imgfile)s "
-                    "imgfmt=%(imgfmt)s partition=%(partition)s"),
+        LOG.debug("Instance for image imgfile=%(imgfile)s imgfmt=%(imgfmt)s partition=%(partition)s" %
                   {'imgfile': imgfile, 'imgfmt': imgfmt,
                    'partition': partition})
         hasGuestfs = False
         try:
-            LOG.debug(_("Trying to import guestfs"))
-            importutils.import_module("guestfs")
+            LOG.debug("Trying to import guestfs")
+            import_module("guestfs")
             hasGuestfs = True
         except Exception:
             pass
 
         if hasGuestfs:
-            LOG.debug(_("Using primary VFSGuestFS"))
-            return importutils.import_object(
-                "nova.virt.disk.vfs.guestfs.VFSGuestFS",
+            LOG.debug("Using primary VFSGuestFS")
+            return import_object(
+                "virt.disk.vfs.guestfs.VFSGuestFS",
                 imgfile, imgfmt, partition)
         else:
-            LOG.debug(_("Falling back to VFSLocalFS"))
-            return importutils.import_object(
-                "nova.virt.disk.vfs.localfs.VFSLocalFS",
+            LOG.debug("Falling back to VFSLocalFS")
+            return import_object(
+                "virt.disk.vfs.localfs.VFSLocalFS",
                 imgfile, imgfmt, partition)
 
     """

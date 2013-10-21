@@ -1,4 +1,4 @@
-<domain type='${type}'>
+<domain type='kvm'>
     <uuid>${name}</uuid>
     <name>${name}</name>
     <memory>${mem}</memory>
@@ -23,10 +23,9 @@
         </disk>
 #for $nic in $nics
         <interface type='bridge'>
-            <source bridge='${nic.bridge_name}'/>
-            <mac address='${nic.mac_address}'/>
+            <source bridge='${nic[bridge_name]}'/>
+            <mac address='${nic[mac_address]}'/>
             <virtualport type="openvswitch"></virtualport>
-            <target dev='${nic.name}'/>
         </interface>
 #end for
         <graphics type='vnc' port='${vnc_port}' listen='0.0.0.0'/>

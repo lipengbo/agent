@@ -1,47 +1,25 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
-# Copyright 2011 Red Hat, Inc.
-#
-# Licensed under the Apache License, Version 2.0 (the "License"); you may
-# not use this file except in compliance with the License. You may obtain
-# a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-# License for the specific language governing permissions and limitations
-# under the License.
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# Filename:nbd.py
+# Date:Mon Oct 21 11:19:57 CST 2013
+# Author:Pengbo Li
+# E-mail:lipengbo10054444@gmail.com
 """Support for mounting images with qemu-nbd."""
 
 import os
 import random
 import re
 import time
-
-from oslo.config import cfg
-
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import log as logging
-from nova import utils
-from nova.virt.disk.mount import api
-
-LOG = logging.getLogger(__name__)
-
-nbd_opts = [
-    cfg.IntOpt('timeout_nbd',
-               default=10,
-               help='time to wait for a NBD device coming up'),
-    ]
-
-CONF = cfg.CONF
-CONF.register_opts(nbd_opts)
-
+from common import log as logging
+from virt import utils
+from virt.disk.mount import api
+LOG = logging.getLogger('agent')
 NBD_DEVICE_RE = re.compile('nbd[0-9]+')
+TIMEOUT_NBD = 10
 
 
 class NbdMount(api.Mount):
+
     """qemu-nbd support disk images."""
     mode = 'nbd'
 
@@ -53,13 +31,16 @@ class NbdMount(api.Mount):
         for device in devices:
             if not os.path.exists(os.path.join('/sys/block/', device, 'pid')):
                 return device
-        LOG.warn(_('No free nbd devices'))
+        LOG.warn("No free nbd devices")
         return None
 
     def _allocate_nbd(self):
         if not os.path.exists('/sys/block/nbd0'):
-            LOG.error(_('nbd module not loaded'))
-            self.error = _('nbd unavailable: module not loaded')
+            LOG.error("nbd module not loaded")
+            self.error = 'nbd unavailable: module not loaded'
+            _out, err = utils.trycmd('modprobe', 'nbd', 'max_part=63')
+            if err:
+                LOG.error(err)
             return None
 
         devices = self._detect_nbd_devices()
@@ -67,7 +48,7 @@ class NbdMount(api.Mount):
         device = self._find_unused(devices)
         if not device:
             # really want to log this info, not raise
-            self.error = _('No free nbd devices')
+            self.error = 'No free nbd devices'
             return None
         return os.path.join('/dev', device)
 
@@ -84,33 +65,33 @@ class NbdMount(api.Mount):
 
         # NOTE(mikal): qemu-nbd will return an error if the device file is
         # already in use.
-        LOG.debug(_('Get nbd device %(dev)s for %(imgfile)s'),
+        LOG.debug("Get nbd device %(dev)s for %(imgfile)s" %
                   {'dev': device, 'imgfile': self.image})
         _out, err = utils.trycmd('qemu-nbd', '-c', device, self.image,
                                  run_as_root=True)
         if err:
-            self.error = _('qemu-nbd error: %s') % err
-            LOG.info(_('NBD mount error: %s'), self.error)
+            self.error = "qemu-nbd error: %s" % err
+            LOG.info("NBD mount error: %s" % self.error)
             return False
 
         # NOTE(vish): this forks into another process, so give it a chance
         # to set up before continuing
         pidfile = "/sys/block/%s/pid" % os.path.basename(device)
-        for _i in range(CONF.timeout_nbd):
+        for _i in range(TIMEOUT_NBD):
             if os.path.exists(pidfile):
                 self.device = device
                 break
             time.sleep(1)
         else:
-            self.error = _('nbd device %s did not show up') % device
-            LOG.info(_('NBD mount error: %s'), self.error)
+            self.error = "nbd device %s did not show up" % device
+            LOG.info("NBD mount error: %s" % self.error)
 
             # Cleanup
             _out, err = utils.trycmd('qemu-nbd', '-d', device,
                                      run_as_root=True)
             if err:
-                LOG.warn(_('Detaching from erroneous nbd device returned '
-                           'error: %s'), err)
+                LOG.warn(
+                    "Detaching from erroneous nbd device returned error: %s" % err)
             return False
 
         self.error = ''
@@ -124,7 +105,7 @@ class NbdMount(api.Mount):
     def unget_dev(self):
         if not self.linked:
             return
-        LOG.debug(_('Release nbd device %s'), self.device)
+        LOG.debug("Release nbd device %s" % self.device)
         utils.execute('qemu-nbd', '-d', self.device, run_as_root=True)
         self.linked = False
         self.device = None

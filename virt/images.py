@@ -181,4 +181,38 @@ def convert_image(source, dest, out_format, run_as_root=False):
 
 def fetch(url, target):
     LOG.debug('Fetching %s' % url)
-    utils.execute('curl', '--fail', url, '-o', target)
+    return utils.execute('curl', '--fail', url, '-o', target)
+
+
+def get_disk_backing_file(path):
+    """Get the backing file of a disk image
+
+    :param path: Path to the disk image
+    :returns: a path to the image's backing store
+    """
+    out, err = utils.execute('qemu-img', 'info', path)
+    backing_file = None
+
+    for line in out.split('\n'):
+        if line.startswith('backing file: '):
+            if 'actual path: ' in line:
+                backing_file = line.split('actual path: ')[1][:-1]
+            else:
+                backing_file = line.split('backing file: ')[1]
+            break
+    if backing_file:
+        backing_file = os.path.basename(backing_file)
+
+    return backing_file
+
+
+def create_cow_image(backing_file, path, size_gb):
+    """Create COW image
+
+    Creates a COW image with the given backing file
+
+    :param backing_file: Existing image on which to base the COW image
+    :param path: Desired location of the COW image
+    """
+    size = '%sG' % size_gb
+    return utils.execute('qemu-img', 'create', '-f', 'qcow2', '-o', 'backing_file=%s' % backing_file, path, size)

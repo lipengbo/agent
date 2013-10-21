@@ -46,8 +46,7 @@ def abspath(path):
 #高级配置项，一般情况下不用修改
 libvirt_xml_template = abspath('../virt/libvirt.xml.template')
 injected_network_template = abspath('../virt/interfaces.template')
-domain_type = 'kvm'
-image_path = '/var/lib/libvirt/images'
+image_path = '/var/lib/libvirt/images/'
 rpc_connection_timeout = 150
 #libvirt相关配置
 libvirt_blocking = False

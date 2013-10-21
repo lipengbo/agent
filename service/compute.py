@@ -7,19 +7,19 @@
 import traceback
 from twisted.web import xmlrpc
 from virt.libvirtConn import LibvirtConnection
-from libs import rpcClient
-from libs import exception
-from libs import utils
+from common import xml_rpc_client
+from common import utils
 from ovs import vswitch
 from etc import constants
 from etc import config
-from libs import log as logging
+from common import log as logging
 import threading
 MUTEX = threading.Lock()
-LOG = logging.getLogger("agent.virt")
+LOG = logging.getLogger("agent")
 
 
 class ComputeManager(LibvirtConnection):
+
     def __init__(self):
         super(ComputeManager, self).__init__()
 
@@ -78,7 +78,7 @@ class ComputeManager(LibvirtConnection):
 
     def set_domain_state(self, vname, state):
         try:
-            client = rpcClient.get_rpc_client(config.vt_manager_ip, config.vt_manager_port)
+            client = xml_rpc_client.get_rpc_client(config.vt_manager_ip, config.vt_manager_port)
             client.set_domain_state(vname, state)
         except:
             LOG.error(traceback.print_exc())
