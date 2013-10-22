@@ -10,9 +10,9 @@ import traceback
 from virtinst import util
 from virt.libvirtConn import LibvirtConnection
 from etc import config
-from libs import utils
+from common import utils
 import psutil
-from libs import log as logging
+from common import log as logging
 LOG = logging.getLogger("agent.monitor")
 
 
@@ -25,8 +25,8 @@ class HostMonitor(object):
     def get_info(self):
         try:
             info = {}
-            if self.connection is None:
-                self.connection = LibvirtConnection()
+            if self.conn is None:
+                self.conn = LibvirtConnection()._conn
             conn_info = self.conn.getInfo()
             arch = conn_info[0]
             vcpus = conn_info[2]
@@ -54,15 +54,34 @@ class HostMonitor(object):
         """
         return psutil.virtual_memory()
 
-    def get_disk_usage(self, partition):
+    def get_disk_usage(self):
         """
-        It's a list
-        usage(total=350163386368, used=52553580544, free=279822499840, percent=15.0)
+        return a dict
+        {'sda6': usage(total=350163386368, used=83777933312, free=248598147072, percent=23.9),
+        'sda2': usage(total=214643503104, used=53969371136, free=160674131968, percent=25.1),
+        'sda3': usage(total=429496725504, used=218062954496, free=211433771008, percent=50.8)}
         """
-        return psutil.disk_usage(partition)
+        disk_usage = {}
+        for partition in psutil.disk_partitions():
+            disk_usage[partition[0].rpartition('/')[2]] = psutil.disk_usage(partition[1])
+        return disk_usage
 
-    def get_net_usage(self, interface):
-        return psutil.network_io_counters(1)[interface]
+    def get_disk_io_status(self):
+        """
+        return a dict
+        {'sda6': iostat(read_count=269052, write_count=328787, read_bytes=21520634880, write_bytes=46957727744, read_time=2766852, write_time=72206028),
+        'sda3': iostat(read_count=14307, write_count=0, read_bytes=262045696, write_bytes=0, read_time=49840, write_time=0),
+        'sda2': iostat(read_count=7895, write_count=32, read_bytes=120766464, write_bytes=155648, read_time=39332, write_time=280),
+        """
+        disk_list = [partition[0].rpartition('/')[2] for partition in psutil.disk_partitions()]
+        disk_io_status = psutil.disk_io_counters(1)
+        for disk_name in disk_io_status.keys():
+            if disk_name not in disk_list:
+                disk_io_status.pop(disk_name)
+        return disk_io_status
+
+    def get_net_io_status(self):
+        return psutil.network_io_counters(1)
 
     def get_status(self):
         cpuusage = '%s' % self.get_cpu_usage()

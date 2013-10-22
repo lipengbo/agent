@@ -8,12 +8,12 @@ import traceback
 from twisted.web import xmlrpc
 from virt.libvirtConn import LibvirtConnection
 from common import xml_rpc_client
-from etc import constants
 from etc import config
-from common import log as logging
+from etc import constants
 import threading
-MUTEX = threading.Lock()
+from common import log as logging
 LOG = logging.getLogger("agent")
+MUTEX = threading.RLock()
 
 
 class ComputeManager(object):
@@ -21,7 +21,7 @@ class ComputeManager(object):
     def __init__(self):
         self.conn = LibvirtConnection()
 
-    def create_domain(self, vmInfo, interfaces, files=None, key=None):
+    def create_domain(self, vmInfo, interfaces, key=None):
         """
         vmInfo:
             {
@@ -40,10 +40,25 @@ class ComputeManager(object):
                         {'name': dev_name, 'address': address, 'netmask': netmask, 'broadcast':broadcast, 'gateway': gateway, 'dns': dns}
                         ]
         """
-        self.conn.create_vm(vmInfo=vmInfo, interfaces=interfaces, files=files, key=key)
+        try:
+            MUTEX.acquire()
+            self.conn.create_vm(vmInfo=vmInfo, interfaces=interfaces, key=key)
+            self._set_domain_state(vmInfo['name'], state=constants.DOMAIN_STATE['failed'])
+        except:
+            LOG.error(traceback.print_exc())
+        else:
+            state = self.conn.get_state(vmInfo['name'])
+            self._set_domain_state(vmInfo['name'], state=state)
+        finally:
+            MUTEX.release()
 
     def delete_domain(self, vname):
-        self.conn.delete_vm(vname)
+        try:
+            self.conn.delete_vm(vname)
+            return True
+        except:
+            LOG.error(traceback.print_exc())
+            return False
 
     def _set_domain_state(self, vname, state):
         try:
@@ -65,8 +80,7 @@ class ComputeService(xmlrpc.XMLRPC):
 
     def xmlrpc_get_domain_state(self, vname):
         conn = LibvirtConnection()
-        state = conn.get_state(vname)
-        return state
+        return conn.get_state(vname)
 
     def xmlrpc_do_domain_action(self, vname, action):
         conn = LibvirtConnection()
@@ -76,7 +90,7 @@ class ComputeService(xmlrpc.XMLRPC):
         except:
             return False
 
-    def xmlrpc_create_vm(self, vmInfo, netInfo):
+    def xmlrpc_create_vm(self, vmInfo, netInfo, key=None):
         """
         vmInfo:
             {
@@ -95,10 +109,10 @@ class ComputeService(xmlrpc.XMLRPC):
                         {'name': dev_name, 'address': address, 'netmask': netmask, 'broadcast':broadcast, 'gateway': gateway, 'dns': dns}
                         ]
         """
-        create_vm_func = ComputeManager().create_vm_workflow
-        t1 = threading.Thread(target=create_vm_func, args=(vmInfo, netInfo))
-        t1.start()
+        create_vm_func = ComputeManager().create_domain
+        t1 = threading.Thread(target=create_vm_func, args=(vmInfo, netInfo, key))
+        t1.run()
         return True
 
     def xmlrpc_delete_vm(self, vname):
-        return ComputeManager().delete_vm_workflow(vname)
+        return ComputeManager().delete_domain(vname)

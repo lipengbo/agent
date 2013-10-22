@@ -13,14 +13,14 @@ import exception
 class LibvirtOpenVswitchDriver(object):
 
     def get_dev_name(_self, instance_id):
-        return instance_id[0:8]
+        bridge_name = 'ccf-br-%s' % instance_id
+        bridge_port = 'ccf-base-port-%s' % fix
+        peer_port = 'p%s' % fix
+        return bridge_name, bridge_port, peer_port
 
     def plug(self, instance_id, vmtype):
         try:
-            fix = self.get_dev_name(instance_id)
-            bridge_name = 'br%s' % fix
-            bridge_port = 'b%s' % fix
-            peer_port = 'p%s' % fix
+            bridge_name, bridge_port, peer_port = self.get_dev_name(instance_id)
             vswitch.ovs_vsctl_add_bridge(bridge_name)
             utils.execute('ip', 'link', 'add', bridge_port, 'type', 'veth', 'peer', 'name', peer_port)
             utils.execute('ip', 'link', 'set', bridge_port, 'up')
@@ -39,10 +39,7 @@ class LibvirtOpenVswitchDriver(object):
 
     def unplug(self, instance_id):
         try:
-            fix = self.get_dev_name(instance_id)
-            bridge_name = 'br%s' % fix
-            bridge_port = 'b%s' % fix
-            peer_port = 'p%s' % fix
+            bridge_name, bridge_port, peer_port = self.get_dev_name(instance_id)
             utils.execute('ip', 'link', 'del', bridge_port, 'type', 'veth', 'peer', 'name', peer_port)
             vswitch.ovs_vsctl_del_bridge(bridge_name)
             vswitch.ovs_vsctl_del_port(peer_port)

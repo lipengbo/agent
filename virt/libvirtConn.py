@@ -16,6 +16,7 @@ from virt.disk import api as disk_api
 from virt.vif import LibvirtOpenVswitchDriver
 import exception
 from common import log as logging
+from etc import constants
 LOG = logging.getLogger("agent.virt")
 VM_TYPE = {'controller': 0, 'slice_vm': 1, 'gateway': 2}
 
@@ -79,8 +80,11 @@ class LibvirtConnection(object):
         return dom.autostart()
 
     def get_state(self, vname):
-        dom = self.get_instance(vname)
-        return dom.info()[0]
+        try:
+            dom = self.get_instance(vname)
+            return dom.info()[0]
+        except:
+            return constants.DOMAIN_STATE['notexist']
 
     def do_action(self, vname, action):
         dom = self.get_instance(vname)
@@ -116,7 +120,7 @@ class LibvirtConnection(object):
         interface_xml = open(config.injected_network_template).read()
         return str(Template(interface_xml, searchList=[{'interfaces': interfaces}]))
 
-    def create_vm(self, vmInfo, interfaces, files=None, key=None):
+    def create_vm(self, vmInfo, interfaces, key=None):
         """
         vmInfo:
             {
@@ -166,7 +170,7 @@ class LibvirtConnection(object):
         try:
             if (vm_type != VM_TYPE['slice_vm']) and interfaces:
                 netXml = self.prepare_interface_xml(interfaces)
-                disk_api.inject_data(vm_image, net=netXml, partition=1)
+                disk_api.inject_data(vm_image, net=netXml, key=key, partition=1)
             if vm_type == VM_TYPE['gateway']:
                 LOG.debug('inject dhcp data into gateway')
         except:
