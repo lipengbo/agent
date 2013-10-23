@@ -7,12 +7,14 @@
 import time
 import libvirt
 import traceback
-from virtinst import util
+import json
+from lxml import etree
 from virt.libvirtConn import LibvirtConnection
-from etc import config
-from common import utils
+from virt.images import qemu_img_info
 import psutil
 from common import log as logging
+import re
+NET_DEV_PATTERN = re.compile('^v(net|br|base|peer).*')
 LOG = logging.getLogger("agent.monitor")
 
 
@@ -31,11 +33,16 @@ class HostMonitor(object):
             arch = conn_info[0]
             vcpus = conn_info[2]
             xml_inf = self.conn.getSysinfo(0)
-            cpu_Hz = util.get_xml_path(xml_inf, "/sysinfo/processor/entry[6]")
-            info['cpu'] = "%s %s %s" % (arch, vcpus, cpu_Hz)
+            doc = etree.fromstring(xml_inf)
+            path = './processor'
+            ret = doc.findall(path)
+            cpu_hz = []
+            for node in ret:
+                cpu_hz.extend([child.text for child in node.getchildren() if child.get('name') == 'version'])
+            info['cpu'] = "%s %s %s" % (arch, vcpus, cpu_hz[0])
             info['vcpus'] = "%s" % vcpus
             info['mem'] = '%s' % (self.get_mem_usage()[0] >> 20)
-            info['hdd'] = '%s' % (self.get_disk_usage("/")[0] >> 30)
+            info['hdd'] = '%s' % (self.get_disk_usage(sep=False)[0] >> 30)
             return info
         except libvirt.libvirtError:
             LOG.error(traceback.print_exc())
@@ -54,19 +61,21 @@ class HostMonitor(object):
         """
         return psutil.virtual_memory()
 
-    def get_disk_usage(self):
+    def get_disk_usage(self, sep=True):
         """
         return a dict
         {'sda6': usage(total=350163386368, used=83777933312, free=248598147072, percent=23.9),
         'sda2': usage(total=214643503104, used=53969371136, free=160674131968, percent=25.1),
         'sda3': usage(total=429496725504, used=218062954496, free=211433771008, percent=50.8)}
         """
+        if not sep:
+            return psutil.disk_usage('/')
         disk_usage = {}
         for partition in psutil.disk_partitions():
             disk_usage[partition[0].rpartition('/')[2]] = psutil.disk_usage(partition[1])
         return disk_usage
 
-    def get_disk_io_status(self):
+    def get_disk_io_status(self, sep=True):
         """
         return a dict
         {'sda6': iostat(read_count=269052, write_count=328787, read_bytes=21520634880, write_bytes=46957727744, read_time=2766852, write_time=72206028),
@@ -74,38 +83,65 @@ class HostMonitor(object):
         'sda2': iostat(read_count=7895, write_count=32, read_bytes=120766464, write_bytes=155648, read_time=39332, write_time=280),
         """
         disk_list = [partition[0].rpartition('/')[2] for partition in psutil.disk_partitions()]
-        disk_io_status = psutil.disk_io_counters(1)
+        disk_io_status = psutil.disk_io_counters(sep)
         for disk_name in disk_io_status.keys():
             if disk_name not in disk_list:
                 disk_io_status.pop(disk_name)
         return disk_io_status
 
     def get_net_io_status(self):
-        return psutil.network_io_counters(1)
+        """
+        {'br100': iostat(bytes_sent=211562870, bytes_recv=34420315988, packets_sent=2954086, packets_recv=18654351, errin=0, errout=0, dropin=0, dropout=0),
+        'lo': iostat(bytes_sent=18146808, bytes_recv=18146808, packets_sent=110998, packets_recv=110998, errin=0, errout=0, dropin=0, dropout=0),
+        'br1': iostat(bytes_sent=31441, bytes_recv=115790, packets_sent=196, packets_recv=1238, errin=0, errout=0, dropin=0, dropout=0),
+        'eth0': iostat(bytes_sent=245736901, bytes_recv=38661873571, packets_sent=3376581, packets_recv=34852880, errin=0, errout=0, dropin=0, dropout=0)
+        }
+        """
+        net_io_status = psutil.network_io_counters(1)
+        for net_dev in net_io_status.keys():
+            if NET_DEV_PATTERN.search(net_dev):
+                net_io_status.pop(net_dev)
+        return net_io_status
 
     def get_status(self):
-        cpuusage = '%s' % self.get_cpu_usage()
-        memusage = '%s' % self.get_mem_usage()[2]
-        diskusage = '%s' % self.get_disk_usage("/")[3]
-        netusage = '%s' % ((self.get_net_usage(config.data_br)[0] >> 20) / 10.0)
-        return {'cpu': cpuusage, 'mem': memusage, 'disk': diskusage, 'net': netusage}
+        host_status = {}
+        host_status['cpu'] = self.get_cpu_usage()
+        host_status['mem'] = self.get_mem_usage()
+        host_status['disk'] = self.get_disk_usage()
+        host_status['net'] = self.get_net_io_status()
+        return json.dumps(host_status)
+
+
+OLD_CPU_TIME = {}
 
 
 class DomainMonitor(object):
 
     def __init__(self, vname):
         super(DomainMonitor, self).__init__()
-        self.conn = LibvirtConnection()._conn
-        self.dom = self.conn.get_instance(vname)
+        self.vname = vname
+        self.wrap_conn = LibvirtConnection()
+        self.conn = self.wrap_conn._conn
+        self.dom = self.wrap_conn.get_instance(vname)
+        self.nbcore = self.conn.getInfo()[2]
+
+    def get_old_cpu_time(self):
+        global OLD_CPU_TIME
+        old_cpu_time = OLD_CPU_TIME.get(self.vname, None)
+        if not old_cpu_time:
+            OLD_CPU_TIME[self.vname] = old_cpu_time = (self.dom.info()[4], time.time())
+        return old_cpu_time
 
     def get_cpu_usage(self):
+        """
+        return 52.5
+        """
         try:
-            nbcore = self.conn.getInfo()[2]
-            cpu_use_ago = self.dom.info()[4]
-            time.sleep(1)
-            cpu_use_now = self.dom.info()[4]
-            diff_usage = cpu_use_now - cpu_use_ago
-            cpu_usage = 100 * diff_usage / (1 * nbcore * 10 ** 9)
+            old_cpu_time = self.get_old_cpu_time()
+            new_cpu_time = (self.dom.info()[4], time.time())
+            diff_usage = new_cpu_time[0] - old_cpu_time[0]
+            duration = new_cpu_time[1] - old_cpu_time[1]
+            cpu_usage = 100 * diff_usage / (duration * self.nbcore * 10 ** 9)
             return cpu_usage
         except libvirt.libvirtError:
             LOG.error(traceback.print_exc())
@@ -113,43 +149,47 @@ class DomainMonitor(object):
             LOG.error(traceback.print_exc())
 
     def get_mem_usage(self):
-        memStat = {}
+        """
+        {'total': 262144L, 'percent': 100L, 'free': 0L, 'used': 262144L},
+        """
+        mem_stat = {}
         try:
-            allmem = memStat['all'] = self.conn.getInfo()[1] * 1048576
-            dom_mem = memStat['usage'] = self.dom.info()[1] * 1024
-            memStat['percent'] = (dom_mem * 100) / allmem
-            return memStat
+            domain_info = self.dom.info()
+            mem_stat['total'] = max_mem = domain_info[1]
+            mem_stat['used'] = curent_mem = domain_info[2]
+            mem_stat['free'] = max_mem - curent_mem
+            mem_stat['percent'] = (curent_mem * 100) / max_mem
+            return mem_stat
         except libvirt.libvirtError:
-            LOG.error(traceback.print_exc())
-        except Exception:
             LOG.error(traceback.print_exc())
 
     def get_disk_usage(self):
-        diskStat = {}
-        total, err = utils.execute(
-            "qemu-img info %s | grep -i 'disk size:'|awk '{print $3}'" % self.get_hdd()[0])
-        usage, err = utils.execute(
-            "qemu-img info %s | grep -i 'virtual size:'|awk '{print $3}'" % self.get_hdd()[0])
-        diskStat['all'] = total.strip()
-        diskStat['usage'] = usage.strip()
-        diskStat['percent'] = float(diskStat['usage'][0:-1]) * 100 / float(diskStat['all'][0:-1])
-        if diskStat['percent'] >= 100:
-            diskStat['percent'] = 100
-        return diskStat
+        """
+        {'total': 214748364800.0, 'percent': 2.25, 'free': 209916526592.0, 'used': 4831838208.0}
+        """
+        disk_stat = {}
+        try:
+            img_path = self.wrap_conn.get_hdd(self.vname)
+            img_info = qemu_img_info(img_path)
+            disk_stat['total'] = img_info.virtual_size
+            disk_stat['used'] = img_info.disk_size
+            disk_stat['free'] = disk_stat['total'] - disk_stat['used']
+            disk_stat['percent'] = (disk_stat['used'] * 100) / disk_stat['total']
+            return disk_stat
+        except:
+            LOG.error(traceback.print_exc())
 
-    def get_net_usage(self, interface):
-        return psutil.network_io_counters(1)[interface]
+    def get_net_usage(self):
+        target_nic = self.wrap_conn.get_nic_target(self.vname)
+        return target_nic
 
     def get_status(self):
-        cpuusage = '%s' % self.get_cpu_usage()
-        memusage = '%s' % self.get_mem_usage()['percent']
-        diskusage = '%s' % self.get_disk_usage()['percent']
-        target = self.get_nic_target()
-        if target:
-            netusage = '%s' % ((self.get_net_usage(target)[0] >> 20) / 10.0)
-        else:
-            netusage = '0'
-        return {'vname': self.vname, 'cpu': cpuusage, 'mem': memusage, 'disk': diskusage, 'net': netusage}
+        dom_status = {}
+        dom_status['cpu'] = self.get_cpu_usage()
+        dom_status['mem'] = self.get_mem_usage()
+        dom_status['disk'] = self.get_disk_usage()
+        dom_status['net'] = self.get_net_usage()
+        return json.dumps(dom_status)
 
 
 from twisted.web import xmlrpc
@@ -170,32 +210,10 @@ class MonitorService(xmlrpc.XMLRPC):
         hostInfo = host.get_info()
         return hostInfo
 
-    def xmlrpc_get_domain_info(self, vname):
-        domain = DomainMonitor(vname)
-        domainInfo = domain.get_info()
-        return domainInfo
-
     def xmlrpc_get_host_status(self):
         host = HostMonitor()
-        cpu_percent = host.get_cpu_usage()
-        mem_usage = host.get_mem_usage()
-        mem_percent = mem_usage[2]
-        mem_free = "%s" % (mem_usage[1] >> 20)
-        mem_total = "%s" % (mem_usage[0] >> 20)
-        disk_free = "%s" % (host.get_disk_usage('/')[2] >> 30)
-        return {'cpu_percent': cpu_percent, 'mem': {'total': mem_total, 'free': mem_free, 'percent': mem_percent}, 'disk_free': disk_free}
-
-    def xmlrpc_get_host_status_percent(self):
-        host = HostMonitor()
-        hoststatus = host.get_status()
-        return hoststatus
+        return host.get_status()
 
     def xmlrpc_get_domain_status(self, vname):
         domain = DomainMonitor(vname)
-        domainStatus = domain.get_status()
-        return domainStatus
-
-    def xmlrpc_get_domain_state(self, vname):
-        host = HostMonitor()
-        domain_state = host.get_state(vname)
-        return domain_state
+        return domain.get_status()

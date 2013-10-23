@@ -7,6 +7,7 @@
 import os
 import libvirt
 import shutil
+from lxml import etree
 from eventlet import tpool
 from Cheetah.Template import Template
 from etc import config
@@ -32,7 +33,7 @@ class LibvirtConnection(object):
         else:
             self._conn = tpool.proxy_call((
                 libvirt.virDomain, libvirt.virConnect), self._connect, uri)
-        return self._conn
+            return self._conn
 
     @staticmethod
     def _connect(uri):
@@ -66,7 +67,7 @@ class LibvirtConnection(object):
         return domain.info()
 
     def get_instance(self, vname):
-        vname = self.conn.lookupByName(vname)
+        vname = self._conn.lookupByName(vname)
         return vname
 
     def get_xml(self, vname):
@@ -85,6 +86,48 @@ class LibvirtConnection(object):
             return dom.info()[0]
         except:
             return constants.DOMAIN_STATE['notexist']
+
+    def get_vnc_port(self, vname):
+        target = []
+        try:
+            dom = self.get_instance(vname)
+            xml = dom.XMLDesc(0)
+            doc = etree.fromstring(xml)
+            path = './devices/graphics'
+            ret = doc.findall(path)
+            for node in ret:
+                target.append(node.get('port'))
+        except:
+            pass
+        return target[0]
+
+    def get_hdd(self, vname):
+        target = []
+        try:
+            dom = self.get_instance(vname)
+            xml = dom.XMLDesc(0)
+            doc = etree.fromstring(xml)
+            path = './devices/disk'
+            ret = doc.findall(path)
+            for node in ret:
+                target.extend([child.get('file') for child in node.getchildren() if child.tag == 'source'])
+        except:
+            pass
+        return target[0]
+
+    def get_nic_target(self, vname):
+        target = []
+        try:
+            dom = self.get_instance(vname)
+            xml = dom.XMLDesc(0)
+            doc = etree.fromstring(xml)
+            path = './devices/interface'
+            ret = doc.findall(path)
+            for node in ret:
+                target.extend([child.get('dev') for child in node.getchildren() if child.tag == 'target'])
+        except:
+            pass
+        return target
 
     def do_action(self, vname, action):
         dom = self.get_instance(vname)
@@ -189,7 +232,7 @@ class LibvirtConnection(object):
         #step 5: define network
         try:
             domainXml = self.prepare_libvirt_xml(vmInfo)
-            self.conn.defineXML(domainXml)
+            self._conn.defineXML(domainXml)
         except:
             if os.path.exists(vm_home):
                 shutil.rmtree(vm_home)

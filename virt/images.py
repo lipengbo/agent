@@ -10,7 +10,7 @@ Handling of VM disk images.
 import os
 import re
 from common import log as logging
-from common import utils
+from virt import utils
 LOG = logging.getLogger('agent')
 
 
@@ -21,7 +21,7 @@ BYTE_MULTIPLIERS = {
     'm': 1024 ** 2,
     'k': 1024,
 }
-BYTE_REGEX = re.compile(r'(^-?\d+)(\D*)')
+BYTE_REGEX = re.compile(r'(^-?\d+\.*\d*)(\D*)')
 
 
 def to_bytes(text, default=0):
@@ -37,7 +37,7 @@ def to_bytes(text, default=0):
     """
     match = BYTE_REGEX.search(text)
     if match:
-        magnitude = int(match.group(1))
+        magnitude = float(match.group(1))
         mult_key_org = match.group(2)
         if not mult_key_org:
             return magnitude
