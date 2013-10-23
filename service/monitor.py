@@ -180,8 +180,17 @@ class DomainMonitor(object):
             LOG.error(traceback.print_exc())
 
     def get_net_usage(self):
+        """
+        {'vnet0': iostat(bytes_sent=211562870, bytes_recv=34420315988, packets_sent=2954086, packets_recv=18654351, errin=0, errout=0, dropin=0, dropout=0),
+        'vnet1': iostat(bytes_sent=18146808, bytes_recv=18146808, packets_sent=110998, packets_recv=110998, errin=0, errout=0, dropin=0, dropout=0),
+        }
+        """
         target_nic = self.wrap_conn.get_nic_target(self.vname)
-        return target_nic
+        net_io_status = psutil.network_io_counters(1)
+        for net_dev in net_io_status.keys():
+            if net_dev not in target_nic:
+                net_io_status.pop(net_dev)
+        return net_io_status
 
     def get_status(self):
         dom_status = {}

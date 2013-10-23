@@ -15,6 +15,7 @@ from virt import images
 from virt import utils
 from virt.disk import api as disk_api
 from virt.vif import LibvirtOpenVswitchDriver
+from virt.ipam import netaddr
 import exception
 from common import log as logging
 from etc import constants
@@ -142,7 +143,6 @@ class LibvirtConnection(object):
                 'name': name,
                 'mem': mem,
                 'cpus': cpus,
-                'vnc_port': vnc_port,
                 'nics': [{'bridge_name': bridge1, 'mac_address': mac1}, {'bridge_name': bridge2, 'mac_address': mac2}]
             }
         """
@@ -163,7 +163,7 @@ class LibvirtConnection(object):
         interface_xml = open(config.injected_network_template).read()
         return str(Template(interface_xml, searchList=[{'interfaces': interfaces}]))
 
-    def create_vm(self, vmInfo, interfaces, key=None):
+    def create_vm(self, vmInfo, key=None):
         """
         vmInfo:
             {
@@ -173,14 +173,13 @@ class LibvirtConnection(object):
                 'img': imageUUID,
                 'hdd': imageSize 2,
                 'glanceURL': glanceURL,
-                'vnc_port': vnc_port,
-                'nics': [{'bridge_name': bridge1, 'mac_address': mac1}, {'bridge_name': bridge2, 'mac_address': mac2}],
+                'network': [
+                    {'address':'192.168.5.100/29', 'gateway':'192.168.5.1',},
+                    {'address':'172.16.0.100/16', 'gateway':'172.16.0.1',},
+                ]
+                'dns': '8.8.8.8'
                 'type': 0 for controller; 1 for vm; 2 for gateway
             }
-        'interfaces' = [
-                        {'name': dev_name, 'address': address, 'netmask': netmask, 'broadcast':broadcast, 'gateway': gateway, 'dns': dns},
-                        {'name': dev_name, 'address': address, 'netmask': netmask, 'broadcast':broadcast, 'gateway': gateway, 'dns': dns}
-                        ]
         """
         #step 0: data prepare
         image_url = vmInfo.pop('glanceURL')
@@ -211,11 +210,35 @@ class LibvirtConnection(object):
             raise
         #step 3: inject data into vm
         try:
-            if (vm_type != VM_TYPE['slice_vm']) and interfaces:
-                netXml = self.prepare_interface_xml(interfaces)
-                disk_api.inject_data(vm_image, net=netXml, key=key, partition=1)
+            nics = []
+            interfaces = []
+            net_dev_index = 0
+            for net in vmInfo.pop('network', None):
+                address = net.get('address', '0.0.0.0/0')
+                nic = {}
+                nic['mac_address'] = netaddr.generate_mac_address(netaddr.clean_ip(address))
+                if vm_type == VM_TYPE['controller']:
+                    nic['bridge_name'] = config.control_br
+                else:
+                    nic['bridge_name'] = config.data_br
+                nics.append(nic)
+                netaddr_network = netaddr.Network(address)
+                ifc = {}
+                ifc['name'] = 'eth%s' % net_dev_index
+                ifc['address'] = netaddr.clean_ip(address)
+                ifc['netmask'] = str(netaddr_network.netmask)
+                ifc['broadcast'] = str(netaddr_network.broadcast)
+                ifc['gateway'] = net.get('gateway', netaddr_network.get_first_host())
+                ifc['dns'] = vmInfo.pop('dns', '8.8.8.8')
+                interfaces.append(ifc)
+                net_dev_index = net_dev_index + 1
+            vmInfo['nics'] = nics
+            netXml = self.prepare_interface_xml(interfaces)
+            files = None
             if vm_type == VM_TYPE['gateway']:
                 LOG.debug('inject dhcp data into gateway')
+                files = None
+            disk_api.inject_data(vm_image, net=netXml, key=key, files=files, partition=1)
         except:
             if os.path.exists(vm_home):
                 shutil.rmtree(vm_home)
@@ -247,7 +270,7 @@ class LibvirtConnection(object):
         self.do_action(vname, 'undefine')
         #step 2: delete virtual interface
         ovs_driver = LibvirtOpenVswitchDriver()
-        ovs_driver.unplug('vname')
+        ovs_driver.unplug(vname)
         #step 3: clean vm image, delete vm_home
         vm_home = config.image_path + vname
         if os.path.exists(vm_home):

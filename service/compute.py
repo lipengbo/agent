@@ -5,7 +5,6 @@
 # Author:Pengbo Li
 # E-mail:lipengbo10054444@gmail.com
 import traceback
-from twisted.web import xmlrpc
 from virt.libvirtConn import LibvirtConnection
 from common import xml_rpc_client
 from etc import config
@@ -18,10 +17,11 @@ MUTEX = threading.RLock()
 
 class ComputeManager(object):
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
+        super(ComputeManager, self).__init__(*args, **kwargs)
         self.conn = LibvirtConnection()
 
-    def create_domain(self, vmInfo, interfaces, key=None):
+    def create_domain(self, vmInfo, key=None):
         """
         vmInfo:
             {
@@ -31,18 +31,17 @@ class ComputeManager(object):
                 'img': imageUUID,
                 'hdd': imageSize 2,
                 'glanceURL': glanceURL,
-                'vnc_port': vnc_port,
-                'nics': [{'bridge_name': bridge1, 'mac_address': mac1}, {'bridge_name': bridge2, 'mac_address': mac2}],
+                'network': [
+                    {'address':'192.168.5.100/29', 'gateway':'192.168.5.1',},
+                    {'address':'172.16.0.100/16', 'gateway':'172.16.0.1',},
+                ]
+                'dns': '8.8.8.8'
                 'type': 0 for controller; 1 for vm; 2 for gateway
             }
-        'interfaces' = [
-                        {'name': dev_name, 'address': address, 'netmask': netmask, 'broadcast':broadcast, 'gateway': gateway, 'dns': dns},
-                        {'name': dev_name, 'address': address, 'netmask': netmask, 'broadcast':broadcast, 'gateway': gateway, 'dns': dns}
-                        ]
         """
         try:
             MUTEX.acquire()
-            self.conn.create_vm(vmInfo=vmInfo, interfaces=interfaces, key=key)
+            self.conn.create_vm(vmInfo=vmInfo, key=key)
             self._set_domain_state(vmInfo['name'], state=constants.DOMAIN_STATE['failed'])
         except:
             LOG.error(traceback.print_exc())
@@ -68,6 +67,9 @@ class ComputeManager(object):
             LOG.error(traceback.print_exc())
 
 
+from twisted.web import xmlrpc
+
+
 class ComputeService(xmlrpc.XMLRPC):
 
     def __init__(self):
@@ -90,7 +92,7 @@ class ComputeService(xmlrpc.XMLRPC):
         except:
             return False
 
-    def xmlrpc_create_vm(self, vmInfo, netInfo, key=None):
+    def xmlrpc_create_vm(self, vmInfo, key=None):
         """
         vmInfo:
             {
@@ -100,17 +102,16 @@ class ComputeService(xmlrpc.XMLRPC):
                 'img': imageUUID,
                 'hdd': imageSize 2,
                 'glanceURL': glanceURL,
-                'vnc_port': vnc_port,
-                'nics': [{'bridge_name': bridge1, 'mac_address': mac1}, {'bridge_name': bridge2, 'mac_address': mac2}],
+                'network': [
+                    {'address':'192.168.5.100/29', 'gateway':'192.168.5.1',},
+                    {'address':'172.16.0.100/16', 'gateway':'172.16.0.1',},
+                ]
+                'dns': '8.8.8.8'
                 'type': 0 for controller; 1 for vm; 2 for gateway
             }
-        'interfaces' = [
-                        {'name': dev_name, 'address': address, 'netmask': netmask, 'broadcast':broadcast, 'gateway': gateway, 'dns': dns},
-                        {'name': dev_name, 'address': address, 'netmask': netmask, 'broadcast':broadcast, 'gateway': gateway, 'dns': dns}
-                        ]
         """
         create_vm_func = ComputeManager().create_domain
-        t1 = threading.Thread(target=create_vm_func, args=(vmInfo, netInfo, key))
+        t1 = threading.Thread(target=create_vm_func, args=(vmInfo, key))
         t1.run()
         return True
 

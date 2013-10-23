@@ -16,7 +16,7 @@ class LibvirtOpenVswitchDriver(object):
         fix = instance_id[0:8]
         bridge_name = 'vbr-%s' % fix
         bridge_port = 'vbase-%s' % fix
-        peer_port = 'vpeer%s' % fix
+        peer_port = 'vpeer-%s' % fix
         return bridge_name, bridge_port, peer_port
 
     def plug(self, instance_id, vmtype):

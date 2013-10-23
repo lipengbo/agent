@@ -4,6 +4,7 @@
 # Date:Mon Sep 02 10:34:11 CST 2013
 # Author:Pengbo Li
 # E-mail:lipengbo10054444@gmail.com
+import os
 
 
 #[service]
@@ -15,21 +16,14 @@ ovs_service = 0
 #[common]
 control_br = 'br1'
 data_br = 'br100'
-#当设备为域间网关时需要配置对外的网桥
-out_br = 'br-out'
-ip = '127.0.0.1'
 
-#Compute Service配置
-#data_br: 设置本机的出口网桥
-#[compute]
-compute_service_bridge = data_br
+#[compute service]
 compute_service_port = 8886
 
-
-#Monitor 用于获取宿主及和虚拟机的状态，外界通过rpc接口获取具体的监控数据
+#[monitor service]
 monitor_service_port = 8887
 
-#OVS Servie封装ovs的方法并对外提供服务，一般在ovs、controller这两类设备上需要启动该服务
+#[ovs service]
 ovs_service_port = 8889
 controller_bin_path = '/usr/local/floodloght/target'
 
@@ -37,10 +31,8 @@ controller_bin_path = '/usr/local/floodloght/target'
 vt_manager_ip = '127.0.0.1'
 vt_manager_port = 8891
 
+
 #[Advance]
-import os
-
-
 def abspath(path):
     return os.path.abspath(os.path.join(os.path.dirname(__file__), path))
 #高级配置项，一般情况下不用修改
