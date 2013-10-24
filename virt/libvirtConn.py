@@ -16,7 +16,7 @@ from virt import utils
 from virt.disk import api as disk_api
 from virt.vif import LibvirtOpenVswitchDriver
 from virt.ipam import netaddr
-import exception
+#import exception
 from common import log as logging
 from etc import constants
 LOG = logging.getLogger("agent.virt")
@@ -25,8 +25,15 @@ VM_TYPE = {'controller': 0, 'slice_vm': 1, 'gateway': 2}
 
 class LibvirtConnection(object):
 
-    def __init__(self):
-        self._conn = self._get_connection()
+    def __init__(self, *args, **kwargs):
+        super(LibvirtConnection, self).__init__(*args, **kwargs)
+        self._conn = self._connect('qemu:///system')
+
+    def __del__(self):
+        try:
+            self._conn.close()
+        except:
+            pass
 
     def _get_connection(self, uri='qemu:///system'):
         if config.libvirt_blocking:
@@ -189,21 +196,21 @@ class LibvirtConnection(object):
         #step 1: fetch image from glance
         try:
             target_image = config.image_path + image_uuid
-            out, err = images.fetch(image_url, target_image)
-            if err:
-                raise exception.DownloadImageException(image_uuid=image_uuid)
+            images.fetch(image_url, target_image)
+            #if err:
+                #raise exception.DownloadImageException(image_uuid=image_uuid)
         except:
             if os.path.exists(target_image):
-                shutil.rmtree(target_image)
+                os.remove(target_image)
             raise
         #step 2: create image for vm
         try:
             vm_home = config.image_path + vmInfo['name']
             utils.execute('mkdir', '-p', vm_home)
             vm_image = vm_home + '/disk'
-            out, err = images.create_cow_image(target_image, vm_image, disk_size)
-            if err:
-                raise exception.CreateImageException(instance_id=vmInfo['name'])
+            images.create_cow_image(target_image, vm_image, disk_size)
+            #if err:
+                #raise exception.CreateImageException(instance_id=vmInfo['name'])
         except:
             if os.path.exists(vm_home):
                 shutil.rmtree(vm_home)

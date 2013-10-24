@@ -42,9 +42,9 @@ class ComputeManager(object):
         try:
             MUTEX.acquire()
             self.conn.create_vm(vmInfo=vmInfo, key=key)
-            self._set_domain_state(vmInfo['name'], state=constants.DOMAIN_STATE['failed'])
         except:
             LOG.error(traceback.print_exc())
+            self._set_domain_state(vmInfo['name'], state=constants.DOMAIN_STATE['failed'])
         else:
             state = self.conn.get_state(vmInfo['name'])
             self._set_domain_state(vmInfo['name'], state=state)

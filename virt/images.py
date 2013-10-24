@@ -11,6 +11,7 @@ import os
 import re
 from common import log as logging
 from virt import utils
+import urllib2
 LOG = logging.getLogger('agent')
 
 
@@ -180,12 +181,15 @@ def convert_image(source, dest, out_format, run_as_root=False):
 
 
 def fetch(url, target):
-    if os.path.exists(target):
-        LOG.debug('Image %s has been exists' % target)
-        return True, False
+    if not os.path.exists(target):
+        LOG.debug('Downloading Image %s' % target)
+        request = urllib2.urlopen(url)
+        content_buffer = 16 << 10
+        with open(target, 'wb') as fp:
+            for content in iter(lambda: request.read(content_buffer), ''):
+                fp.write(content)
     else:
-        LOG.debug('Fetching %s' % url)
-        return utils.execute('curl', '--fail', url, '-o', target)
+        LOG.debug('Image %s has been exists' % target)
 
 
 def get_disk_backing_file(path):
@@ -218,5 +222,4 @@ def create_cow_image(backing_file, path, size_gb):
     :param backing_file: Existing image on which to base the COW image
     :param path: Desired location of the COW image
     """
-    size = '%sG' % size_gb
-    return utils.execute('qemu-img', 'create', '-f', 'qcow2', '-o', 'backing_file=%s' % backing_file, path, size)
+    return utils.execute('qemu-img', 'create', '-f', 'qcow2', '-o', 'backing_file=%s' % backing_file, path)

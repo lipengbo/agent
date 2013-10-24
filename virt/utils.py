@@ -9,11 +9,13 @@ from common import utils
 
 
 def execute(*args, **kwargs):
-    return utils.execute(shell=False, *args, **kwargs)
+    kwargs['shell'] = kwargs.get('shell', False)
+    return utils.execute(*args, **kwargs)
 
 
 def trycmd(*args, **kwargs):
-    return utils.trycmd(shell=False, *args, **kwargs)
+    kwargs['shell'] = kwargs.get('shell', False)
+    return utils.trycmd(*args, **kwargs)
 
 
 def get_fs_info(path):
