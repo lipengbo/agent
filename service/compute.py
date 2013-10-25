@@ -6,13 +6,12 @@
 # E-mail:lipengbo10054444@gmail.com
 import traceback
 from virt.libvirtConn import LibvirtConnection
-from common import xml_rpc_client
+from common import xmlrpcclient
 from etc import config
 from etc import constants
-import threading
+import eventlet
 from common import log as logging
 LOG = logging.getLogger("agent")
-MUTEX = threading.RLock()
 
 
 class ComputeManager(object):
@@ -40,16 +39,13 @@ class ComputeManager(object):
             }
         """
         try:
-            MUTEX.acquire()
+            eventlet.sleep()
             self.conn.create_vm(vmInfo=vmInfo, key=key)
+            state = self.conn.get_state(vmInfo['name'])
         except:
             LOG.error(traceback.print_exc())
-            self._set_domain_state(vmInfo['name'], state=constants.DOMAIN_STATE['failed'])
-        else:
-            state = self.conn.get_state(vmInfo['name'])
-            self._set_domain_state(vmInfo['name'], state=state)
-        finally:
-            MUTEX.release()
+            state = constants.DOMAIN_STATE['failed']
+        self._set_domain_state(vmInfo['name'], state=state)
 
     def delete_domain(self, vname):
         try:
@@ -61,7 +57,7 @@ class ComputeManager(object):
 
     def _set_domain_state(self, vname, state):
         try:
-            client = xml_rpc_client.get_rpc_client(config.vt_manager_ip, config.vt_manager_port)
+            client = xmlrpcclient.get_rpc_client(config.vt_manager_ip, config.vt_manager_port)
             client.set_domain_state(vname, state)
         except:
             LOG.error(traceback.print_exc())
@@ -92,6 +88,10 @@ class ComputeService(xmlrpc.XMLRPC):
         except:
             return False
 
+    def xmlrpc_get_vnc_port(self, vname):
+        conn = LibvirtConnection()
+        return conn.get_vnc_port(vname)
+
     def xmlrpc_create_vm(self, vmInfo, key=None):
         """
         vmInfo:
@@ -111,9 +111,16 @@ class ComputeService(xmlrpc.XMLRPC):
             }
         """
         create_vm_func = ComputeManager().create_domain
-        t1 = threading.Thread(target=create_vm_func, args=(vmInfo, key))
-        t1.run()
+        eventlet.spawn_n(create_vm_func, vmInfo, key)
+        eventlet.sleep(0)
         return True
 
     def xmlrpc_delete_vm(self, vname):
         return ComputeManager().delete_domain(vname)
+
+    def xmlrpc_instances_count(self):
+        try:
+            conn = LibvirtConnection()
+            return len(conn.list_instances())
+        except:
+            return config.domain_count_infinity

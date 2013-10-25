@@ -23,17 +23,27 @@ LOG = logging.getLogger("agent.virt")
 VM_TYPE = {'controller': 0, 'slice_vm': 1, 'gateway': 2}
 
 
+def patch_tpool_proxy():
+    """eventlet.tpool.Proxy doesn't work with old-style class in __str__()
+    """
+    def str_method(self):
+        return str(self._obj)
+
+    def repr_method(self):
+        return repr(self._obj)
+
+    tpool.Proxy.__str__ = str_method
+    tpool.Proxy.__repr__ = repr_method
+
+
+patch_tpool_proxy()
+
+
 class LibvirtConnection(object):
 
     def __init__(self, *args, **kwargs):
         super(LibvirtConnection, self).__init__(*args, **kwargs)
-        self._conn = self._connect('qemu:///system')
-
-    def __del__(self):
-        try:
-            self._conn.close()
-        except:
-            pass
+        self._conn = self._get_connection()
 
     def _get_connection(self, uri='qemu:///system'):
         if config.libvirt_blocking:
@@ -44,7 +54,7 @@ class LibvirtConnection(object):
             return self._conn
 
     @staticmethod
-    def _connect(uri):
+    def _connect(uri='qemu:///system'):
         auth = [[libvirt.VIR_CRED_AUTHNAME, libvirt.VIR_CRED_NOECHOPROMPT],
                 'root',
                 None]
@@ -103,11 +113,12 @@ class LibvirtConnection(object):
             doc = etree.fromstring(xml)
             path = './devices/graphics'
             ret = doc.findall(path)
-            for node in ret:
-                target.append(node.get('port'))
+            target.extend([node.get('port') for node in ret if node.get('port') != -1])
+            #for node in ret:
+                #target.append(node.get('port'))
         except:
             pass
-        return target[0]
+        return target and target[0]
 
     def get_hdd(self, vname):
         target = []
@@ -262,12 +273,18 @@ class LibvirtConnection(object):
         #step 5: define network
         try:
             domainXml = self.prepare_libvirt_xml(vmInfo)
-            self._conn.defineXML(domainXml)
+            conn = self._connect()
+            conn.defineXML(domainXml)
         except:
             if os.path.exists(vm_home):
                 shutil.rmtree(vm_home)
             ovs_driver.unplug(vmInfo['name'])
             raise
+        finally:
+            try:
+                conn.close()
+            except:
+                pass
 
     def delete_vm(self, vname):
         #step 0: stop vm
