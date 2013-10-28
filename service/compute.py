@@ -9,9 +9,10 @@ from virt.libvirtConn import LibvirtConnection
 from common import xmlrpcclient
 from etc import config
 from etc import constants
-import eventlet
 from common import log as logging
+import threading
 LOG = logging.getLogger("agent")
+MUTEX = threading.RLock()
 
 
 class ComputeManager(object):
@@ -20,7 +21,8 @@ class ComputeManager(object):
         super(ComputeManager, self).__init__(*args, **kwargs)
         self.conn = LibvirtConnection()
 
-    def create_domain(self, vmInfo, key=None):
+    @staticmethod
+    def create_domain(vmInfo, key=None):
         """
         vmInfo:
             {
@@ -39,13 +41,16 @@ class ComputeManager(object):
             }
         """
         try:
-            eventlet.sleep()
-            self.conn.create_vm(vmInfo=vmInfo, key=key)
-            state = self.conn.get_state(vmInfo['name'])
+            MUTEX.acquire()
+            LibvirtConnection.create_vm(vmInfo=vmInfo, key=key)
         except:
             LOG.error(traceback.print_exc())
             state = constants.DOMAIN_STATE['failed']
-        self._set_domain_state(vmInfo['name'], state=state)
+        else:
+            state = constants.DOMAIN_STATE['nostate']
+        finally:
+            MUTEX.release()
+            ComputeManager._set_domain_state(vmInfo['name'], state=state)
 
     def delete_domain(self, vname):
         try:
@@ -55,7 +60,8 @@ class ComputeManager(object):
             LOG.error(traceback.print_exc())
             return False
 
-    def _set_domain_state(self, vname, state):
+    @staticmethod
+    def _set_domain_state(vname, state):
         try:
             client = xmlrpcclient.get_rpc_client(config.vt_manager_ip, config.vt_manager_port)
             client.set_domain_state(vname, state)
@@ -111,8 +117,8 @@ class ComputeService(xmlrpc.XMLRPC):
             }
         """
         create_vm_func = ComputeManager().create_domain
-        eventlet.spawn_n(create_vm_func, vmInfo, key)
-        eventlet.sleep(0)
+        t = threading.Thread(target=create_vm_func, args=(vmInfo, key))
+        t.start()
         return True
 
     def xmlrpc_delete_vm(self, vname):

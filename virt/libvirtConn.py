@@ -181,7 +181,8 @@ class LibvirtConnection(object):
         interface_xml = open(config.injected_network_template).read()
         return str(Template(interface_xml, searchList=[{'interfaces': interfaces}]))
 
-    def create_vm(self, vmInfo, key=None):
+    @staticmethod
+    def create_vm(vmInfo, key=None):
         """
         vmInfo:
             {
@@ -251,7 +252,7 @@ class LibvirtConnection(object):
                 interfaces.append(ifc)
                 net_dev_index = net_dev_index + 1
             vmInfo['nics'] = nics
-            netXml = self.prepare_interface_xml(interfaces)
+            netXml = LibvirtConnection.prepare_interface_xml(interfaces)
             files = None
             if vm_type == VM_TYPE['gateway']:
                 LOG.debug('inject dhcp data into gateway')
@@ -272,8 +273,8 @@ class LibvirtConnection(object):
             raise
         #step 5: define network
         try:
-            domainXml = self.prepare_libvirt_xml(vmInfo)
-            conn = self._connect()
+            domainXml = LibvirtConnection.prepare_libvirt_xml(vmInfo)
+            conn = LibvirtConnection._connect()
             conn.defineXML(domainXml)
         except:
             if os.path.exists(vm_home):

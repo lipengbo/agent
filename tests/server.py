@@ -65,7 +65,7 @@ def _create_vm(vname, network, vm_type):
     vmInfo['glanceURL'] = ' http://192.168.5.107:9292/v1/images/a09273ab-382a-4622-b18c-705fda77bdcc'
     vmInfo['network'] = network
     vmInfo['type'] = vm_type
-    agent.create_vm(vmInfo)
+    print '$$$$$$$$$$$$$$$$$$$ create vm result = %s $$$$$$$$$$$$$$$$$$$$$' % agent.create_vm(vmInfo)
 
 
 def create_controller():
@@ -124,9 +124,9 @@ def get_vnc_port(self, vname):
 
 def get_all_domains_status():
     while True:
-        t1 = threading.Thread(target=get_all_domains_status, args=('fe0aa044-da47-4722-ab88-57d05852a3d9',))
-        t2 = threading.Thread(target=get_all_domains_status, args=('fe0aa045-da47-4722-ab88-57d05852a3d9',))
-        t3 = threading.Thread(target=get_all_domains_status, args=('fe0aa046-da47-4722-ab88-57d05852a3d9',))
+        t1 = threading.Thread(target=get_domain_status, args=('fe0aa044-da47-4722-ab88-57d05852a3d9',))
+        t2 = threading.Thread(target=get_domain_status, args=('fe0aa045-da47-4722-ab88-57d05852a3d9',))
+        t3 = threading.Thread(target=get_domain_status, args=('fe0aa046-da47-4722-ab88-57d05852a3d9',))
         t1.setDaemon('True')
         t2.setDaemon('True')
         t3.setDaemon('True')
@@ -150,3 +150,13 @@ def test():
     print '---------------------------- start get instances count ----------------------------------'
     print get_instances_count()
     print '---------------------------- end get instances count ----------------------------------'
+    vname = 'fe0aa044-da47-4722-ab88-57d05852a3d9'
+    print '---------------------------- start do domain action ----------------------------------'
+    print do_domain_action(vname, 'create')
+    print '---------------------------- end do domain action ----------------------------------'
+    print '---------------------------- start get domain state ----------------------------------'
+    print get_domain_state(vname)
+    print '---------------------------- end get domain state ----------------------------------'
+    print '---------------------------- start get vnc port ----------------------------------'
+    print get_vnc_port(vname)
+    print '---------------------------- end get vnc port ----------------------------------'
