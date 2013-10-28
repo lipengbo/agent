@@ -42,3 +42,4 @@ image_path = '/var/lib/libvirt/images/'
 rpc_connection_timeout = 150
 #libvirt相关配置
 libvirt_blocking = False
+domain_count_infinity = 1000

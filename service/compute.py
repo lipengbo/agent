@@ -129,4 +129,6 @@ class ComputeService(xmlrpc.XMLRPC):
             conn = LibvirtConnection()
             return len(conn.list_instances())
         except:
+            import traceback
+            LOG.debug(traceback.print_exc())
             return config.domain_count_infinity

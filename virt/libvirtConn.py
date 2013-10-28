@@ -62,7 +62,7 @@ class LibvirtConnection(object):
 
     def list_instances(self):
         instances = [self._conn.lookupByID(x).name() for x in self._conn.listDomainsID()]
-        instances.extends([x for x in self._conn.listDefineedDomains()])
+        instances.extend([x for x in self._conn.listDefinedDomains()])
         return instances
 
     def instance_exists(self, vname):

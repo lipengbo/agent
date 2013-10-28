@@ -12,4 +12,4 @@ if __name__ == '__main__':
     module_name = 'tests.' + module_name
     if module_name not in sys.modules:
         __import__(module_name)
-    getattr(sys.modules[module_name], function_name)()
+    print getattr(sys.modules[module_name], function_name)()
