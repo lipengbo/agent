@@ -12,7 +12,7 @@ import exception
 
 class LibvirtOpenVswitchDriver(object):
 
-    def get_dev_name(_self, instance_id):
+    def get_dev_name(self, instance_id):
         fix = instance_id[0:8]
         bridge_name = 'vbr-%s' % fix
         bridge_port = 'vbase-%s' % fix

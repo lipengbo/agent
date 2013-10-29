@@ -11,7 +11,7 @@ import os
 #agent上启用的服务。1 代表启用 ; 0 代表禁用
 compute_service = 1
 monitor_service = 1
-ovs_service = 0
+ovs_service = 1
 
 #[common]
 control_br = 'br1'
@@ -27,9 +27,9 @@ monitor_service_port = 8887
 ovs_service_port = 8889
 controller_bin_path = '/usr/local/floodloght/target'
 
-#[vt_manager]
-vt_manager_ip = '127.0.0.1'
-vt_manager_port = 8891
+#[ccf]
+ccf_ip = '127.0.0.1'
+ccf_port = 8000
 
 
 #[Advance]

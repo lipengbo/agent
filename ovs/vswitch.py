@@ -224,6 +224,13 @@ def ovs_get_switch_dpid():
     return None
 
 
+def ovs_get_portid_by_name(port_name):
+    ret, out, err = util.start_process(['ovs-vsctl', '--timeout=2', 'get', 'Interface', port_name, 'ofport'])
+    if ret == 0:
+        return ''.join(out.split())
+    return None
+
+
 def set_controller(ip, port):
     """
     设置交换机的控制器，选择设置控制器的网桥依据是该网桥网卡设置了IP地址或已经设置了控制器。

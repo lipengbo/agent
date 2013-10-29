@@ -8,6 +8,7 @@ from twisted.web import xmlrpc
 from ovs import util
 from ovs import vswitch
 from ovs import controller
+from virt.vif import LibvirtOpenVswitchDriver
 
 
 class DeviceCommService(xmlrpc.XMLRPC):
@@ -222,6 +223,10 @@ class DeviceCommService(xmlrpc.XMLRPC):
         Get ovs statistic data
         """
         return vswitch.ovs_get_stat()
+
+    def xmlrpc_get_portid_by_name(self, vm_uuid):
+        port_name = LibvirtOpenVswitchDriver().get_dev_name(vm_uuid)
+        return vswitch.ovs_get_portid_by_name(port_name[2])
 
     def xmlrpc_echo(self):
         """

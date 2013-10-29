@@ -6,7 +6,7 @@
 # E-mail:lipengbo10054444@gmail.com
 import traceback
 from virt.libvirtConn import LibvirtConnection
-from common import xmlrpcclient
+from common.ccf_client import CCFClient
 from etc import config
 from etc import constants
 from common import log as logging
@@ -63,8 +63,8 @@ class ComputeManager(object):
     @staticmethod
     def _set_domain_state(vname, state):
         try:
-            client = xmlrpcclient.get_rpc_client(config.vt_manager_ip, config.vt_manager_port)
-            client.set_domain_state(vname, state)
+            ccf_client = CCFClient()
+            ccf_client.set_domain_state(vname, state)
         except:
             LOG.error(traceback.print_exc())
 
