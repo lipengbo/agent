@@ -166,7 +166,8 @@ class LibvirtConnection(object):
         """
         vmInfo['mem'] = int(vmInfo['mem']) << 10
         vmInfo['basepath'] = config.image_path + vmInfo['name']
-        libvirt_xml = open(config.libvirt_xml_template).read()
+        with open(config.libvirt_xml_template) as f:
+            libvirt_xml = f.read()
         return str(Template(libvirt_xml, searchList=[vmInfo]))
 
     @staticmethod
@@ -178,8 +179,49 @@ class LibvirtConnection(object):
                            {'name': dev_name, 'address': address, 'netmask': netmask, 'broadcast':broadcast, 'gateway': gateway, 'dns': dns}
                            ]
         """
-        interface_xml = open(config.injected_network_template).read()
+        with open(config.injected_network_template) as f:
+            interface_xml = f.read()
         return str(Template(interface_xml, searchList=[{'interfaces': interfaces}]))
+
+    @staticmethod
+    def prepare_dhcp_conf(**dhcp_conf):
+        """
+        dhcp_conf:
+            {
+                'ip_start': '192.168.5.1',
+                'ip_end': '192.168.5.6',
+                'netmask': 255.255.255.248,
+            }
+        """
+        with open(config.dhcp_conf) as f:
+            dhcp_conf_content = f.read()
+        return str(Template(dhcp_conf_content, searchList=[dhcp_conf]))
+
+    @staticmethod
+    def prepare_dhcp_hostfile(mac_ip_list):
+        """
+        mac_ip_list = (('00:e0:4c:52:ff:53', '192.168.1.1'),('00:e0:4c:52:ff:54', '192.168.1.2'))
+        """
+        with open(config.dhcp_hostfile) as f:
+            dhcp_hostfile_content = f.read()
+        return str(Template(dhcp_hostfile_content, searchList=[mac_ip_list]))
+
+    @staticmethod
+    def prepare_dhcp_files(**netInfo):
+        """
+            {'address':'192.168.5.100/29', 'gateway':'192.168.5.1',}
+        """
+        network_addr = netInfo.get('address')
+        network = netaddr.Network(network_addr)
+        ip_start = str(netaddr.IPAddress(network.first))
+        ip_end = str(netaddr.IPAddress(network.last))
+        netmask = network.netmask
+        dhcp_conf_content = LibvirtConnection.prepare_dhcp_conf(ip_start=ip_start, ip_end=ip_end, netmask=netmask)
+        mac_ip_list = []
+        for host_ip in network.iter_hosts():
+            mac_ip_list.append((netaddr.generate_mac_address(host_ip), host_ip))
+        dhcp_hostfile_content = LibvirtConnection.prepare_dhcp_hostfile()
+        return ((config.dhcp_conf_target, dhcp_conf_content), (config.dhcp_hostfile_target, dhcp_hostfile_content))
 
     @staticmethod
     def create_vm(vmInfo, key=None):
@@ -232,7 +274,8 @@ class LibvirtConnection(object):
             nics = []
             interfaces = []
             net_dev_index = 0
-            for net in vmInfo.pop('network', None):
+            network = vmInfo.pop('network', None)
+            for net in network:
                 address = net.get('address', '0.0.0.0/0')
                 nic = {}
                 nic['mac_address'] = netaddr.generate_mac_address(netaddr.clean_ip(address))
@@ -256,7 +299,7 @@ class LibvirtConnection(object):
             files = None
             if vm_type == VM_TYPE['gateway']:
                 LOG.debug('inject dhcp data into gateway')
-                files = None
+                files = LibvirtConnection.prepare_dhcp_files(network[0])
             disk_api.inject_data(vm_image, net=netXml, key=key, files=files, partition=1)
         except:
             if os.path.exists(vm_home):
@@ -271,7 +314,7 @@ class LibvirtConnection(object):
                 shutil.rmtree(vm_home)
             ovs_driver.unplug(vmInfo['name'])
             raise
-        #step 5: define network
+        #step 5: define vm
         try:
             domainXml = LibvirtConnection.prepare_libvirt_xml(vmInfo)
             conn = LibvirtConnection._connect()

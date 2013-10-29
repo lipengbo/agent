@@ -43,3 +43,8 @@ rpc_connection_timeout = 150
 #libvirt相关配置
 libvirt_blocking = False
 domain_count_infinity = 1000
+#dhcp相关配置
+dhcp_conf = abspath('../virt/dhcp_default.conf')
+dhcp_hostfile = abspath('../virt/dhcp_default.hostfile')
+dhcp_conf_target = '/etc/ccf_dhcp/default.conf'
+dhcp_hostfile_target = '/etc/ccf_dhcp/default.hostfile'
