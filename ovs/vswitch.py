@@ -226,8 +226,9 @@ def ovs_get_switch_dpid():
 
 def ovs_get_portid_by_name(port_name):
     ret, out, err = util.start_process(['ovs-vsctl', '--timeout=2', 'get', 'Interface', port_name, 'ofport'])
-    if ret == 0:
-        return ''.join(out.split())
+    out = out.splitlines()
+    if ret == 0 and out:
+        return ''.join(out)
     return None
 
 

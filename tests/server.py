@@ -8,6 +8,7 @@ import time
 import threading
 from common.agent_client import AgentClient
 from common import log as logging
+from common.ovs_client import get_portid_by_name
 LOG = logging.getLogger("agent.virt")
 
 
@@ -134,6 +135,11 @@ def get_all_domains_status():
         t2.start()
         t3.start()
         time.sleep(1)
+
+
+def test_get_portid_by_name():
+    portid = get_portid_by_name('127.0.0.1', '16e89cb2-f648-429b-aaec-858af712d12b')
+    print type(portid)
 
 
 def test():
