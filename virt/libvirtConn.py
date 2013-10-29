@@ -204,10 +204,10 @@ class LibvirtConnection(object):
         """
         with open(config.dhcp_hostfile) as f:
             dhcp_hostfile_content = f.read()
-        return str(Template(dhcp_hostfile_content, searchList=[mac_ip_list]))
+        return str(Template(dhcp_hostfile_content, searchList=[{'mac_ip_list': mac_ip_list}]))
 
     @staticmethod
-    def prepare_dhcp_files(**netInfo):
+    def prepare_dhcp_files(netInfo):
         """
             {'address':'192.168.5.100/29', 'gateway':'192.168.5.1',}
         """
@@ -220,7 +220,7 @@ class LibvirtConnection(object):
         mac_ip_list = []
         for host_ip in network.iter_hosts():
             mac_ip_list.append((netaddr.generate_mac_address(host_ip), host_ip))
-        dhcp_hostfile_content = LibvirtConnection.prepare_dhcp_hostfile()
+        dhcp_hostfile_content = LibvirtConnection.prepare_dhcp_hostfile(mac_ip_list=mac_ip_list)
         return ((config.dhcp_conf_target, dhcp_conf_content), (config.dhcp_hostfile_target, dhcp_hostfile_content))
 
     @staticmethod
