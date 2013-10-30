@@ -188,9 +188,9 @@ class LibvirtConnection(object):
         """
         dhcp_conf:
             {
-                'ip_start': '192.168.5.1',
-                'ip_end': '192.168.5.6',
-                'netmask': 255.255.255.248,
+                'ip_start': '192.168.5.2',
+                'netsize': 5,
+                'gateway': '192.168.5.1',
             }
         """
         with open(config.dhcp_conf) as f:
@@ -212,11 +212,11 @@ class LibvirtConnection(object):
             {'address':'192.168.5.100/29', 'gateway':'192.168.5.1',}
         """
         network_addr = netInfo.get('address')
+        gateway = netInfo.get('gateway')
         network = netaddr.Network(network_addr)
-        ip_start = str(netaddr.IPAddress(network.first))
-        ip_end = str(netaddr.IPAddress(network.last))
-        netmask = network.netmask
-        dhcp_conf_content = LibvirtConnection.prepare_dhcp_conf(ip_start=ip_start, ip_end=ip_end, netmask=netmask)
+        ip_start = str(network.get_host(1))
+        netsize = network.size
+        dhcp_conf_content = LibvirtConnection.prepare_dhcp_conf(ip_start=ip_start, netsize=netsize, gateway=gateway)
         mac_ip_list = []
         for host_ip in network.iter_hosts():
             mac_ip_list.append((netaddr.generate_mac_address(host_ip), host_ip))
@@ -270,6 +270,7 @@ class LibvirtConnection(object):
                 shutil.rmtree(vm_home)
             raise
         #step 3: inject data into vm
+        ovs_driver = LibvirtOpenVswitchDriver()
         try:
             nics = []
             interfaces = []
@@ -279,10 +280,7 @@ class LibvirtConnection(object):
                 address = net.get('address', '0.0.0.0/0')
                 nic = {}
                 nic['mac_address'] = netaddr.generate_mac_address(netaddr.clean_ip(address))
-                if vm_type == VM_TYPE['controller']:
-                    nic['bridge_name'] = config.control_br
-                else:
-                    nic['bridge_name'] = config.data_br
+                nic['bridge_name'] = ovs_driver.get_dev_name(vmInfo['name'])[0]
                 nics.append(nic)
                 netaddr_network = netaddr.Network(address)
                 ifc = {}
@@ -293,20 +291,22 @@ class LibvirtConnection(object):
                 ifc['gateway'] = net.get('gateway', netaddr_network.get_first_host())
                 ifc['dns'] = vmInfo.pop('dns', '8.8.8.8')
                 interfaces.append(ifc)
+                interfaces.reverse()
                 net_dev_index = net_dev_index + 1
             vmInfo['nics'] = nics
-            netXml = LibvirtConnection.prepare_interface_xml(interfaces)
             files = None
+            netXml = None
             if vm_type == VM_TYPE['gateway']:
                 LOG.debug('inject dhcp data into gateway')
                 files = LibvirtConnection.prepare_dhcp_files(network[0])
+            if vm_type != VM_TYPE['slice_vm']:
+                netXml = LibvirtConnection.prepare_interface_xml(interfaces)
             disk_api.inject_data(vm_image, net=netXml, key=key, files=files, partition=1)
         except:
             if os.path.exists(vm_home):
                 shutil.rmtree(vm_home)
             raise
         #step 4: prepare link for binding to ovs
-        ovs_driver = LibvirtOpenVswitchDriver()
         try:
             ovs_driver.plug(vmInfo['name'], vm_type)
         except:

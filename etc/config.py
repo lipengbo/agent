@@ -14,7 +14,7 @@ monitor_service = 1
 ovs_service = 1
 
 #[common]
-control_br = 'br1'
+control_br = 'br100'
 data_br = 'br100'
 
 #[compute service]
@@ -47,4 +47,4 @@ domain_count_infinity = 1000
 dhcp_conf = abspath('../virt/dhcp_default.conf')
 dhcp_hostfile = abspath('../virt/dhcp_default.hostfile')
 dhcp_conf_target = '/etc/ccf_dhcp/default.conf'
-dhcp_hostfile_target = '/etc/ccf_dhcp/default.hostfile'
+dhcp_hostfile_target = '/etc/ccf_dhcp/default.hostsfile'

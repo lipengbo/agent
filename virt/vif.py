@@ -26,8 +26,8 @@ class LibvirtOpenVswitchDriver(object):
             utils.execute('ip', 'link', 'add', bridge_port, 'type', 'veth', 'peer', 'name', peer_port)
             utils.execute('ip', 'link', 'set', bridge_port, 'up')
             utils.execute('ip', 'link', 'set', peer_port, 'up')
-            utils.execute('ip', 'link', 'set', bridge_port, 'promisc', 'on')
-            utils.execute('ip', 'link', 'set', peer_port, 'promisc', 'on')
+            #utils.execute('ip', 'link', 'set', bridge_port, 'promisc', 'on')
+            #utils.execute('ip', 'link', 'set', peer_port, 'promisc', 'on')
             vswitch.ovs_vsctl_add_port_to_bridge(bridge_name, bridge_port)
             if vmtype == 0:
                 bridge = config.control_br
