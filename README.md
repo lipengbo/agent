@@ -40,6 +40,7 @@ gateway service
   1. 提供生成gateway虚拟机的能力
   2. 提供gateway服务的虚拟机有两块网卡，一个用于链接基础网络的数据层面，一个用于链接虚拟及网络
   3. 提供snat功能，用于虚拟机访问外网
+
 ### 要求
   1. 需要在glance中upload一个名字为gateway的image，该image我已经制作好，并上传到了192.168.5.107的glance服务中
 
