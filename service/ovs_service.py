@@ -228,6 +228,9 @@ class DeviceCommService(xmlrpc.XMLRPC):
         port_name = LibvirtOpenVswitchDriver().get_dev_name(vm_uuid)
         return vswitch.ovs_get_portid_by_name(port_name[2])
 
+    def xmlrpc_get_port_bandwidth(self, brname):
+        return vswitch.ovs_get_port_bandwidth(brname)
+
     def xmlrpc_echo(self):
         """
         Echo message for detect link state
