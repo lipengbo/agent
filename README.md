@@ -49,3 +49,13 @@ dhcp service
 ### 功能
   1. 和gateway共用一个虚拟机
   2. 目前不支持dhcp网段自定义（slice的网络中所有的地址都可以被dhcp分配）
+
+
+sFlow Usage
+-------------
+  1. 初始化
+     curl -H "Content-Type:application/json" -X PUT --data "{keys:'ipsource,ipdestination',value:'bytes',filter:'macdestination=525400B9FA73'}" http://localhost:8008/flow/${switch-port}/json
+  2. 查看结果
+     curl http://127.0.0.1:8008/metric/127.0.0.1/${switch-port}/json
+  3. 查看完整结果
+     curl http://127.0.0.1:8008/metric/127.0.0.1/json
