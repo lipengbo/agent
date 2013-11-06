@@ -22,6 +22,7 @@ compute_service_port = 8886
 
 #[monitor service]
 monitor_service_port = 8887
+sFlow_service = 'http://127.0.0.1:8008/'
 
 #[ovs service]
 ovs_service_port = 8889

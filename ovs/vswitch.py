@@ -359,10 +359,3 @@ def ovs_get_stat():
                 data.append(bridge)
         return data
     return None
-
-
-def ovs_get_port_bandwidth(brname):
-    ret, out, _err = util.start_process(["ovs-ofctl", "show", brname])
-    if ret == 0:
-        return map(lambda x: x.strip(), out.splitlines())
-    return None
