@@ -51,7 +51,7 @@ class SFlow_Proxy(object):
     @staticmethod
     def get_sFlow_metric_event(agentip, dpid, ofport, maclist):
         ifindex = SFlow_Proxy.get_ifindex_by_ofport(dpid, ofport)
-        ifspeed = None
+        ifspeed = 0
         if_used_speed = 0
         for mac in maclist:
             #url = sFlow_service + 'metric/' + agentip + "/" + '%s_%s_%s_in' % (dpid, ofport, mac) + '/json'
@@ -59,19 +59,19 @@ class SFlow_Proxy(object):
             #url = sFlow_service + 'metric/' + agentip + "/" + '%s_%s_%s_out' % (dpid, ofport, mac) + '/json'
             uri = '%s_%s_%s_out' % (dpid, ofport, mac)
             #key = '%s.%s' % (ifindex, uri)
-            url = sFlow_service + 'metric/' + agentip + '/json'
-            out_cmd = "curl " + url
-            #out, err = utils.execute(in_cmd)
-            out, err = utils.execute(out_cmd)
-            out = json.loads(out)
-            if not ifspeed:
-                ifspeed = out.get('%s.ifspeed' % ifindex, None)
             url = sFlow_service + 'metric/' + agentip + '/' + uri + '/json'
             out_cmd = "curl " + url
             out, err = utils.execute(out_cmd)
             out = json.loads(out)
             out_speed = out[0].get('metricValue', 0)
             if_used_speed = if_used_speed + out_speed
+        url = sFlow_service + 'metric/' + agentip + '/json'
+        out_cmd = "curl " + url
+        #out, err = utils.execute(in_cmd)
+        out, err = utils.execute(out_cmd)
+        out = json.loads(out)
+        if not ifspeed:
+            ifspeed = out.get('%s.ifspeed' % ifindex, None)
         return ifspeed, if_used_speed
 
     @staticmethod
