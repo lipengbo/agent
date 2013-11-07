@@ -53,6 +53,31 @@ dhcp service
 
 sFlow Usage
 -------------
+### 原理
+    
+    ovs提供monitor功能支持的协议比较多如sFlow，netFlow等。
+    sFlow有两个不见组成：sFlow client, sFlow server.
+    开启了sFlow功能的ovs相当与一个sFlow client.
+    sFlow server咱们使用的是sFlow-rt，Floodlight的网络流量统计的核心就是基于它的.
+
+### 部署
+    
+  1. 开启Agent 所在机器的sFlow功能
+
+     ovs-vsctl -- --id=@sflow create sflow agent=lo target=\"127.0.0.1:6343\" header=128 sampling=64 polling=1 --set bridge br100 sflow=@sflow
+     其中target为sFlow server的IP，端口6343
+
+  2. 部署sFlow server
+     
+     下载agent代码到sFlow server机器
+
+  3. 启动sFlow server
+     
+     cd ${agent_home}/service/sflow-rt
+     ./start.sh
+
+
+### sFlow-rt的json接口:供开发参考
   1. 初始化
      curl -H "Content-Type:application/json" -X PUT --data "{keys:'ipsource,ipdestination',value:'bytes',filter:'macdestination=525400B9FA73'}" http://localhost:8008/flow/${switch-port}/json
   2. 查看结果
