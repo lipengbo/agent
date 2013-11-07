@@ -155,3 +155,15 @@ def get_portid_by_name(ovs_ip, port_name):
     except:
         pass
     return None
+
+
+def get_sFlow_metric(ovs_ip, dpid, ofport, maclist):
+    """
+        maclist: It's a list of mac,but word must supper and no : in the string.eg: ['525400B9FA73']
+    """
+    try:
+        client = get_rpc_client(ovs_ip, config.ovs_service_port)
+        return client.get_sFlow_metric(ovs_ip, dpid, ofport, maclist)
+    except:
+        pass
+    return None

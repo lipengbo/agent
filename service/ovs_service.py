@@ -9,6 +9,7 @@ from ovs import util
 from ovs import vswitch
 from ovs import controller
 from virt.vif import LibvirtOpenVswitchDriver
+from service.sflow_proxy import SFlow_Proxy
 
 
 class DeviceCommService(xmlrpc.XMLRPC):
@@ -227,6 +228,17 @@ class DeviceCommService(xmlrpc.XMLRPC):
     def xmlrpc_get_portid_by_name(self, vm_uuid):
         port_name = LibvirtOpenVswitchDriver().get_dev_name(vm_uuid)
         return vswitch.ovs_get_portid_by_name(port_name[2])
+
+    def xmlrpc_get_sFlow_metric(self, agentip, dpid, ofport, maclist):
+        ifspeed = 0
+        if_used_speed = 0
+        try:
+            SFlow_Proxy.set_sFlow_metric_event(dpid, ofport, maclist)
+            ifspeed, if_used_speed = SFlow_Proxy.get_sFlow_metric_event(agentip, dpid, ofport, maclist)
+        except Exception, e:
+            print e
+        finally:
+            return ifspeed, if_used_speed
 
     def xmlrpc_echo(self):
         """
