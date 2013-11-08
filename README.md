@@ -65,7 +65,11 @@ sFlow Usage
   1. 开启Agent 所在机器的sFlow功能
 
      ovs-vsctl -- --id=@sflow create sflow agent=lo target=\"127.0.0.1:6343\" header=128 sampling=64 polling=1 --set bridge br100 sflow=@sflow
-     其中target为sFlow server的IP，端口6343
+     该命令执行的次数和需要开启sflow的网桥的数目有关
+     > 参数说明：
+             agent:  用于发送监控信息的网卡
+             target:sFlow server的IP，端口6343
+             bridge：需要开启sflow的网桥
 
   2. 部署sFlow server
      
@@ -76,6 +80,8 @@ sFlow Usage
      cd ${agent_home}/service/sflow-rt
      ./start.sh
 
+  4. 检查sFlow是否配置好
+            curl http://192.168.20.6:8008/agents/json
 
 ### sFlow-rt的json接口:供开发参考
   1. 初始化
