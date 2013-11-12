@@ -192,7 +192,7 @@ def fetch_with_urllib2(url, target):
 
 def fetch_with_wget(url, target):
     cmd = ('wget', '-c', '--timeout=3', '-t', '5', url, '-O', target)
-    utils.execute(*cmd)
+    utils.execute(check_exit_code=True, *cmd)
 
 
 def fetch(url, target, method=fetch_with_wget):
