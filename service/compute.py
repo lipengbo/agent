@@ -41,13 +41,12 @@ class ComputeManager(object):
         """
         try:
             LibvirtConnection.create_vm(vmInfo=vmInfo, key=key)
-        except:
-            LOG.error(traceback.print_exc())
-            state = constants.DOMAIN_STATE['failed']
-        else:
             state = constants.DOMAIN_STATE['nostate']
+        except:
+            state = constants.DOMAIN_STATE['failed']
         finally:
             ComputeManager._set_domain_state(vmInfo['name'], state=state)
+            LOG.error(traceback.print_exc())
 
     def delete_domain(self, vname):
         try:
