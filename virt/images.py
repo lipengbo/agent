@@ -192,7 +192,7 @@ def fetch_with_urllib2(url, target):
 
 def fetch_with_wget(url, target):
     cmd = ('wget', '-c', '--timeout=3', '-t', '5', url, '-O', target)
-    err, out = utils.execute(*cmd)
+    out, err = utils.trycmd(*cmd)
     if err:
         raise Exception('Download file failed')
 
