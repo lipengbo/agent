@@ -12,7 +12,9 @@ import re
 from common import log as logging
 from virt import utils
 import urllib2
+import threading
 LOG = logging.getLogger('agent')
+MUTEX = threading.RLock()
 
 
 BYTE_MULTIPLIERS = {
@@ -180,16 +182,33 @@ def convert_image(source, dest, out_format, run_as_root=False):
     utils.execute(*cmd, run_as_root=run_as_root)
 
 
-def fetch(url, target):
-    if not os.path.exists(target):
-        LOG.debug('Downloading Image %s' % target)
-        request = urllib2.urlopen(url)
-        content_buffer = 16 << 10
-        with open(target, 'wb') as fp:
-            for content in iter(lambda: request.read(content_buffer), ''):
-                fp.write(content)
-    else:
-        LOG.debug('Image %s has been exists' % target)
+def fetch_with_urllib2(url, target):
+    request = urllib2.urlopen(url)
+    content_buffer = 16 << 10
+    with open(target, 'wb') as fp:
+        for content in iter(lambda: request.read(content_buffer), ''):
+            fp.write(content)
+
+
+def fetch_with_wget(url, target):
+    cmd = ('wget', '-c', '--timeout=3 -t 5', url, '-O', target)
+    out, err = utils.execute(*cmd)
+    if err:
+        raise Exception('Download image failed')
+
+
+def fetch(url, target, method=fetch_with_wget):
+    MUTEX.acquire()
+    try:
+        if not os.path.exists(target):
+            LOG.debug('Downloading Image %s' % target)
+            method(url, target)
+        else:
+            LOG.debug('Image %s has been exists' % target)
+    except:
+        raise
+    finally:
+        MUTEX.release()
 
 
 def get_disk_backing_file(path):

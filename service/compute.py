@@ -12,7 +12,6 @@ from etc import constants
 from common import log as logging
 import threading
 LOG = logging.getLogger("agent")
-MUTEX = threading.RLock()
 
 
 class ComputeManager(object):
@@ -41,7 +40,6 @@ class ComputeManager(object):
             }
         """
         try:
-            MUTEX.acquire()
             LibvirtConnection.create_vm(vmInfo=vmInfo, key=key)
         except:
             LOG.error(traceback.print_exc())
@@ -49,7 +47,6 @@ class ComputeManager(object):
         else:
             state = constants.DOMAIN_STATE['nostate']
         finally:
-            MUTEX.release()
             ComputeManager._set_domain_state(vmInfo['name'], state=state)
 
     def delete_domain(self, vname):
