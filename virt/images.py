@@ -200,11 +200,8 @@ def fetch_with_wget(url, target):
 def fetch(url, target, method=fetch_with_wget):
     MUTEX.acquire()
     try:
-        if not os.path.exists(target):
-            LOG.debug('Downloading Image %s' % target)
-            method(url, target)
-        else:
-            LOG.debug('Image %s has been exists' % target)
+        LOG.debug('Downloading Image %s' % target)
+        method(url, target)
     except:
         raise
     finally:
