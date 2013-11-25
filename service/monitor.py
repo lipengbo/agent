@@ -14,6 +14,7 @@ from virt.images import qemu_img_info
 import psutil
 from common import log as logging
 import re
+import platform
 NET_DEV_PATTERN = re.compile('^v(net|br|base|peer).*')
 LOG = logging.getLogger("agent.monitor")
 
@@ -43,6 +44,7 @@ class HostMonitor(object):
             info['vcpus'] = "%s" % vcpus
             info['mem'] = '%s' % (self.get_mem_usage()[0] >> 20)
             info['hdd'] = '%s' % (self.get_disk_usage(sep=False)[0] >> 30)
+	    info['os'] = platform.platform()
             return info
         except libvirt.libvirtError:
             LOG.error(traceback.print_exc())
