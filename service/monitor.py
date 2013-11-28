@@ -44,7 +44,7 @@ class HostMonitor(object):
             info['vcpus'] = "%s" % vcpus
             info['mem'] = '%s' % (self.get_mem_usage()[0] >> 20)
             info['hdd'] = '%s' % (self.get_disk_usage(sep=False)[0] >> 30)
-	    info['os'] = platform.platform()
+            info['os'] = platform.platform()
             return info
         except libvirt.libvirtError:
             LOG.error(traceback.print_exc())
