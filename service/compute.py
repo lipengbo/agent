@@ -44,9 +44,9 @@ class ComputeManager(object):
             state = constants.DOMAIN_STATE['nostate']
         except:
             state = constants.DOMAIN_STATE['failed']
+            LOG.error(traceback.print_exc())
         finally:
             ComputeManager._set_domain_state(vmInfo['name'], state=state)
-            LOG.error(traceback.print_exc())
 
     def delete_domain(self, vname):
         try:

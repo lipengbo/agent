@@ -280,7 +280,10 @@ class LibvirtConnection(object):
                 address = net.get('address', '0.0.0.0/0')
                 nic = {}
                 nic['mac_address'] = netaddr.generate_mac_address(netaddr.clean_ip(address))
-                nic['bridge_name'] = ovs_driver.get_dev_name(vmInfo['name'])[0]
+                if net_dev_index == 1 and config.data_br != config.gw_br:
+                    nic['bridge_name'] = config.gw_br
+                else:
+                    nic['bridge_name'] = ovs_driver.get_dev_name(vmInfo['name'])[0]
                 nics.append(nic)
                 netaddr_network = netaddr.Network(address)
                 ifc = {}
