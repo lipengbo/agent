@@ -60,7 +60,10 @@ class ComputeManager(object):
     def _set_domain_state(vname, state):
         try:
             ccf_client = CCFClient()
-            ccf_client.set_domain_state(vname, state)
+            result = ccf_client.set_domain_state(vname, state)
+            if not result:
+                conn = LibvirtConnection()
+                conn.delete_vm(vname)
         except:
             LOG.error(traceback.print_exc())
 
