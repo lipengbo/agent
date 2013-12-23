@@ -15,8 +15,8 @@ ovs_service = 1
 
 #[common]
 control_br = 'br100'
-data_br = 'br100'
-gw_br = 'br100'
+data_br = 'br1'
+gw_br = control_br
 
 #[compute service]
 compute_service_port = 8886
@@ -30,8 +30,8 @@ ovs_service_port = 8889
 controller_bin_path = '/usr/local/floodloght/target'
 
 #[ccf]
-ccf_ip = '127.0.0.1'
-ccf_port = 8000
+ccf_ip = '192.168.5.24'
+ccf_port = 8002
 
 
 #[Advance]

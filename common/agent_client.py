@@ -12,9 +12,9 @@ class AgentClient(object):
     def __init__(self, ip):
         self.ip = ip
 
-    def do_domain_action(self, vname, action):
+    def do_domain_action(self, vname, action, ofport=None):
         client = get_rpc_client(self.ip, config.compute_service_port)
-        return client.do_domain_action(vname, action)
+        return client.do_domain_action(vname, action, ofport)
 
     def get_domain_state(self, vname):
         client = get_rpc_client(self.ip, config.compute_service_port)

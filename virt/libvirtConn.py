@@ -148,9 +148,12 @@ class LibvirtConnection(object):
             pass
         return target
 
-    def do_action(self, vname, action):
+    def do_action(self, vname, action, ofport_request=None):
         dom = self.get_instance(vname)
         #op_supported = ('create', 'suspend', 'undefine', 'resume', 'destroy')
+        if action == 'create':
+            portname = 'vdata-%s' % vname[0:8]
+            LibvirtOpenVswitchDriver.set_vm_ofport(portname, ofport_request)
         getattr(dom, action)()
 
     @staticmethod
@@ -270,7 +273,7 @@ class LibvirtConnection(object):
                 shutil.rmtree(vm_home)
             raise
         #step 3: inject data into vm
-        ovs_driver = LibvirtOpenVswitchDriver()
+        #ovs_driver = LibvirtOpenVswitchDriver()
         try:
             nics = []
             interfaces = []
@@ -282,8 +285,11 @@ class LibvirtConnection(object):
                 nic['mac_address'] = netaddr.generate_mac_address(netaddr.clean_ip(address))
                 if net_dev_index == 1 and config.data_br != config.gw_br:
                     nic['bridge_name'] = config.gw_br
+                    nic['dev'] = 'vgate-%s' % vmInfo['name'][0:8]
                 else:
-                    nic['bridge_name'] = ovs_driver.get_dev_name(vmInfo['name'])[0]
+                    nic['bridge_name'] = config.data_br
+                    nic['dev'] = 'vdata-%s' % vmInfo['name'][0:8]
+                    #nic['bridge_name'] = ovs_driver.get_dev_name(vmInfo['name'])[0]
                 nics.append(nic)
                 netaddr_network = netaddr.Network(address)
                 ifc = {}
@@ -310,13 +316,13 @@ class LibvirtConnection(object):
                 shutil.rmtree(vm_home)
             raise
         #step 4: prepare link for binding to ovs
-        try:
-            ovs_driver.plug(vmInfo['name'], vm_type)
-        except:
-            if os.path.exists(vm_home):
-                shutil.rmtree(vm_home)
-            ovs_driver.unplug(vmInfo['name'])
-            raise
+        #try:
+            #ovs_driver.plug(vmInfo['name'], vm_type)
+        #except:
+            #if os.path.exists(vm_home):
+                #shutil.rmtree(vm_home)
+            #ovs_driver.unplug(vmInfo['name'])
+            #raise
         #step 5: define vm
         try:
             domainXml = LibvirtConnection.prepare_libvirt_xml(vmInfo)
@@ -325,7 +331,7 @@ class LibvirtConnection(object):
         except:
             if os.path.exists(vm_home):
                 shutil.rmtree(vm_home)
-            ovs_driver.unplug(vmInfo['name'])
+            #ovs_driver.unplug(vmInfo['name'])
             raise
         finally:
             try:
@@ -340,8 +346,8 @@ class LibvirtConnection(object):
         #step 1: undefine vm
         self.do_action(vname, 'undefine')
         #step 2: delete virtual interface
-        ovs_driver = LibvirtOpenVswitchDriver()
-        ovs_driver.unplug(vname)
+        #ovs_driver = LibvirtOpenVswitchDriver()
+        #ovs_driver.unplug(vname)
         #step 3: clean vm image, delete vm_home
         vm_home = config.image_path + vname
         if os.path.exists(vm_home):

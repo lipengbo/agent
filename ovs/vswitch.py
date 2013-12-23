@@ -68,12 +68,14 @@ def ovs_vsctl_is_ovs_bridge(bridge):
     return ret == 0
 
 
-def ovs_vsctl_add_port_to_bridge(bridge, iface):
+def ovs_vsctl_add_port_to_bridge(bridge, iface, ofport=None):
     """
     This function adds given interface to the bridge.
     """
-    ret, _out, _err = util.start_process(["ovs-vsctl", "--", "--may-exist", "add-port", bridge,
-                                          iface])
+    if ofport:
+        ret, _out, _err = util.start_process(["ovs-vsctl", "--", "--may-exist", "add-port", bridge, iface, '--', 'set', 'interface', 'iface', 'ofport_request=%s' % ofport])
+    else:
+        ret, _out, _err = util.start_process(["ovs-vsctl", "--", "--may-exist", "add-port", bridge, iface])
     return ret
 
 

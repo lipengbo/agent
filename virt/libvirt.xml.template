@@ -26,6 +26,7 @@
             <source bridge='${nic['bridge_name']}'/>
             <mac address='${nic['mac_address']}'/>
             <virtualport type="openvswitch"></virtualport>
+            <target dev='${nic['dev']}'/>
         </interface>
 #end for
         <graphics type='vnc' port='-1' autoport='yes' listen='0.0.0.0'/>

@@ -2,6 +2,11 @@ agent
 =====
 getting started
 ---------------
+### 环境依赖
+#### Libvirt
+     libvirt版本为 1.0.1
+#### openvswitch
+     ovs版本 >= 1.10.0
 ### 安装
     pip install -r requirements.txt
     所有服务均可配置，详细说明请查看配置文件

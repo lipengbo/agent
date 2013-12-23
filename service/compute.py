@@ -85,10 +85,10 @@ class ComputeService(xmlrpc.XMLRPC):
         conn = LibvirtConnection()
         return conn.get_state(vname)
 
-    def xmlrpc_do_domain_action(self, vname, action):
+    def xmlrpc_do_domain_action(self, vname, action, ofport=None):
         conn = LibvirtConnection()
         try:
-            conn.do_action(vname, action)
+            conn.do_action(vname, action, ofport_request=ofport)
             return True
         except:
             return False

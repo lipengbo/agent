@@ -47,3 +47,8 @@ class LibvirtOpenVswitchDriver(object):
             return bridge_name
         except:
             pass
+
+    @staticmethod
+    def set_vm_ofport(portname, ofport):
+        bridge = config.data_br
+        vswitch.ovs_vsctl_add_port_to_bridge(bridge, portname, ofport)
