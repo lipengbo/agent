@@ -30,8 +30,8 @@ ovs_service_port = 8889
 controller_bin_path = '/usr/local/floodloght/target'
 
 #[ccf]
-ccf_ip = '192.168.5.24'
-ccf_port = 8002
+ccf_ip = '192.168.5.9'
+ccf_port = 8000
 
 
 #[Advance]

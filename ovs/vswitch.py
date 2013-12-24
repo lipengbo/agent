@@ -26,7 +26,8 @@ def ovs_vsctl_add_bridge(bridge):
     """
     This function creates an OVS bridge.
     """
-    ret, _out, _err = util.start_process(["ovs-vsctl", "--", "--may-exist", "add-br", bridge])
+    ret, _out, _err = util.start_process(
+        ["ovs-vsctl", "--", "--may-exist", "add-br", bridge])
     return ret
 
 
@@ -73,9 +74,11 @@ def ovs_vsctl_add_port_to_bridge(bridge, iface, ofport=None):
     This function adds given interface to the bridge.
     """
     if ofport:
-        ret, _out, _err = util.start_process(["ovs-vsctl", "--", "--may-exist", "add-port", bridge, iface, '--', 'set', 'interface', 'iface', 'ofport_request=%s' % ofport])
+        cmd = ["ovs-vsctl", "--", "--may-exist", "add-port", bridge, iface,
+               '--', 'set', 'interface', iface, 'ofport_request=%s' % ofport]
     else:
-        ret, _out, _err = util.start_process(["ovs-vsctl", "--", "--may-exist", "add-port", bridge, iface])
+        cmd = ["ovs-vsctl", "--", "--may-exist", "add-port", bridge, iface]
+    ret, _out, _err = util.start_process(cmd)
     return ret
 
 
@@ -149,7 +152,8 @@ def ovs_get_bridge_name(dpid):
 
 
 def ovs_set_bridge_dpid(bridge, dpid):
-    ret, out, _err = util.start_process(["ovs-vsctl", "set", "bridge", bridge, "other_config:datapath-id=%s" % dpid])
+    ret, out, _err = util.start_process(
+        ["ovs-vsctl", "set", "bridge", bridge, "other_config:datapath-id=%s" % dpid])
     return ret
 
 
@@ -220,14 +224,16 @@ def ovs_get_switch_dpid():
     bridge = ovs_get_controller_bridge()
     if not bridge:
         bridge = config.data_br
-    ret, out, _err = util.start_process(["ovs-vsctl", "get", "bridge", bridge, "datapath_id"])
+    ret, out, _err = util.start_process(
+        ["ovs-vsctl", "get", "bridge", bridge, "datapath_id"])
     if ret == 0:
         return ''.join(out.split()).replace('"', '')
     return None
 
 
 def ovs_get_portid_by_name(port_name):
-    ret, out, err = util.start_process(['ovs-vsctl', '--timeout=2', 'get', 'Interface', port_name, 'ofport'])
+    ret, out, err = util.start_process(
+        ['ovs-vsctl', '--timeout=2', 'get', 'Interface', port_name, 'ofport'])
     out = out.splitlines()
     if ret == 0 and out:
         return ''.join(out)

@@ -59,6 +59,7 @@ class ComputeManager(object):
     @staticmethod
     def _set_domain_state(vname, state):
         try:
+            result = True
             ccf_client = CCFClient()
             result = ccf_client.set_domain_state(vname, state)
             if not result:

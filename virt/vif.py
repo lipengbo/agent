@@ -52,3 +52,12 @@ class LibvirtOpenVswitchDriver(object):
     def set_vm_ofport(portname, ofport):
         bridge = config.data_br
         vswitch.ovs_vsctl_add_port_to_bridge(bridge, portname, ofport)
+
+    @staticmethod
+    def del_vm_port(vname):
+        gw_port = 'vgate-%s' % vname[0:8]
+        ctr_port = 'vcontr-%s' % vname[0:8]
+        data_port = 'vdata-%s' % vname[0:8]
+        vswitch.ovs_vsctl_del_port(gw_port)
+        vswitch.ovs_vsctl_del_port(ctr_port)
+        vswitch.ovs_vsctl_del_port(data_port)

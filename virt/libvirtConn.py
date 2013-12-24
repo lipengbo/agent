@@ -151,7 +151,7 @@ class LibvirtConnection(object):
     def do_action(self, vname, action, ofport_request=None):
         dom = self.get_instance(vname)
         #op_supported = ('create', 'suspend', 'undefine', 'resume', 'destroy')
-        if action == 'create':
+        if action == 'create' and ofport_request:
             portname = 'vdata-%s' % vname[0:8]
             LibvirtOpenVswitchDriver.set_vm_ofport(portname, ofport_request)
         getattr(dom, action)()
@@ -283,12 +283,15 @@ class LibvirtConnection(object):
                 address = net.get('address', '0.0.0.0/0')
                 nic = {}
                 nic['mac_address'] = netaddr.generate_mac_address(netaddr.clean_ip(address))
-                if net_dev_index == 1 and config.data_br != config.gw_br:
+                if net_dev_index == 1:
                     nic['bridge_name'] = config.gw_br
                     nic['dev'] = 'vgate-%s' % vmInfo['name'][0:8]
-                else:
+                elif vm_type != 0:
                     nic['bridge_name'] = config.data_br
                     nic['dev'] = 'vdata-%s' % vmInfo['name'][0:8]
+                else:
+                    nic['bridge_name'] = config.control_br
+                    nic['dev'] = 'vcontr-%s' % vmInfo['name'][0:8]
                     #nic['bridge_name'] = ovs_driver.get_dev_name(vmInfo['name'])[0]
                 nics.append(nic)
                 netaddr_network = netaddr.Network(address)
@@ -346,8 +349,7 @@ class LibvirtConnection(object):
         #step 1: undefine vm
         self.do_action(vname, 'undefine')
         #step 2: delete virtual interface
-        #ovs_driver = LibvirtOpenVswitchDriver()
-        #ovs_driver.unplug(vname)
+        LibvirtOpenVswitchDriver.del_vm_port(vname)
         #step 3: clean vm image, delete vm_home
         vm_home = config.image_path + vname
         if os.path.exists(vm_home):
