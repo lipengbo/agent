@@ -62,5 +62,8 @@ if len(sys.argv) == 2:
             os.remove(new_agent_home)
     else:
         print 'unknown option, install|uninstall'
+        return
+    init_cmd = 'initctl reload-configuration'
+    utils.execute(init_cmd)
 else:
     print 'usage: python setup.py install|uninstall'
