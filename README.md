@@ -7,12 +7,18 @@ getting started
      libvirt版本为 1.0.1
 #### openvswitch
      ovs版本 >= 1.10.0
+
 ### 安装
+##### 依赖库
     pip install -r requirements.txt
     所有服务均可配置，详细说明请查看配置文件
-    务必保证装agent的机器有两个网桥，一个连接控制网络，一个连接数据层面
-### 启动
-    python agent.py
+##### 执行安装脚本
+    cd ${agenthome}/tools
+    python setup.py install
+
+### 启动/停止
+    start ccf-agent
+    stop ccf-agent
 
 monitor service
 ---------------
@@ -95,3 +101,10 @@ sFlow Usage
      curl http://127.0.0.1:8008/metric/127.0.0.1/${switch-port}/json
   3. 查看完整结果
      curl http://127.0.0.1:8008/metric/127.0.0.1/json
+
+
+Tools
+-------------
+### 虚拟机删除工具
+    cd ${agenthome}/tools
+    python delete_vm.py vmuuid1 vmuuid2 ... vmuuidn

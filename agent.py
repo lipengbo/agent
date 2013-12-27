@@ -31,5 +31,118 @@ def start_service():
         LOG.error(traceback.print_exc())
 
 
+import os
+import sys
+import time
+import atexit
+import gflags
+from signal import SIGTERM
+FLAGS = gflags.FLAGS
+gflags.DEFINE_boolean('daemon', True, 'whether daemon the proccess')
+gflags.DEFINE_string('pidfile', '/var/run/ccf-agent.pid', 'whether daemon the proccess')
+
+
+class AgentDaemon(object):
+
+    def __init__(self, pidfile, daemon):
+        self.pidfile = pidfile
+        self.daemon = daemon
+        if self.daemon:
+            self.stdin = '/dev/null'
+            self.stdout = '/dev/null'
+            self.stderr = '/dev/null'
+        else:
+            self.stdin = sys.stdin
+            self.stdout = sys.stdout
+            self.stderr = sys.stderr
+
+    def delpidfile(self):
+        if os.path.exists(self.pidfile):
+            os.remove(self.pidfile)
+
+    def _fork(self):
+        try:
+            pid = os.fork()
+            if pid > 0:
+                sys.exit(0)
+        except OSError, e:
+            sys.stdout.write(str(e))
+            sys.exit(1)
+
+    def daemonize(self):
+        self._fork()
+        os.chdir('./')
+        os.setsid()
+        os.umask(0)
+        self._fork()
+        atexit.register(self.delpidfile)
+        pid = str(os.getpid())
+        file(self.pidfile, 'w+').write('%s\n' % pid)
+        #设置打印信息不要打印出来
+        sys.stdout.flush()
+        sys.stderr.flush()
+        si = file(self.stdin, 'r')
+        so = file(self.stdout, 'a+')
+        se = file(self.stderr, 'a+', 0)
+        os.dup2(si.fileno(), sys.stdin.fileno())
+        os.dup2(so.fileno(), sys.stdout.fileno())
+        os.dup2(se.fileno(), sys.stderr.fileno())
+
+    def start(self):
+        if self.daemon:
+            self.daemonize()
+        start_service()
+
+    def stop(self):
+        """
+        Stop the daemon
+        """
+        # Get the pid from the pidfile
+        try:
+            pf = file(self.pidfile, 'r')
+            pid = int(pf.read().strip())
+            pf.close()
+        except IOError:
+            pid = None
+
+        if not pid:
+            message = "pidfile %s does not exist. Daemon not running?\n"
+            sys.stderr.write(message % self.pidfile)
+            return
+
+        # Try killing the daemon process
+        try:
+            while 1:
+                os.kill(pid, SIGTERM)
+                time.sleep(0.1)
+        except OSError, err:
+            err = str(err)
+            if err.find("No such process") > 0:
+                if os.path.exists(self.pidfile):
+                    os.remove(self.pidfile)
+            else:
+                print str(err)
+                sys.exit(1)
+
+    def restart(self):
+        self.stop()
+        self.start()
+
+
 if __name__ == '__main__':
-    start_service()
+    argv = FLAGS(sys.argv)
+    if len(argv) == 2:
+        agent = AgentDaemon(FLAGS.pidfile, FLAGS.daemon)
+        if argv[1] == 'start':
+            agent.start()
+        elif argv[1] == 'stop':
+            agent.stop()
+        elif argv[1] == 'restart':
+            agent.restart()
+        else:
+            print "Unknown command"
+            sys.exit(2)
+        sys.exit(0)
+    else:
+        print "usage: %s start|stop|restart" % sys.argv[0]
+        sys.exit(2)

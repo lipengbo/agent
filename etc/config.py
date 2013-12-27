@@ -23,14 +23,14 @@ compute_service_port = 8886
 
 #[monitor service]
 monitor_service_port = 8887
-sFlow_service = 'http://127.0.0.1:8008/'
+sFlow_service = 'http://192.168.5.24:8008/'
 
 #[ovs service]
 ovs_service_port = 8889
 controller_bin_path = '/usr/local/floodloght/target'
 
 #[ccf]
-ccf_ip = '192.168.5.9'
+ccf_ip = '192.168.5.24'
 ccf_port = 8000
 
 
