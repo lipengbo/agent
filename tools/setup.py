@@ -62,7 +62,7 @@ if len(sys.argv) == 2:
             os.remove(new_agent_home)
     else:
         print 'unknown option, install|uninstall'
-        return
+        sys.exit(1)
     init_cmd = 'initctl reload-configuration'
     utils.execute(init_cmd)
 else:
