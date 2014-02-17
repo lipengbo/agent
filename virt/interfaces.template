@@ -12,7 +12,9 @@ auto ${ifc['name']}
 iface ${ifc['name']} inet static
         address ${ifc['address']}
         netmask ${ifc['netmask']}
+#if $ifc['name'] == 'eth1'
         broadcast ${ifc['broadcast']}
         gateway ${ifc['gateway']}
         dns-nameservers ${ifc['dns']}
+#end if
 #end for
