@@ -333,7 +333,7 @@ def _inject_key_into_fs(key, fs):
 
     key_data = ''.join([
         '\n',
-        '# The following ssh key was injected by Nova',
+        '# The following ssh key was injected by ccf-Agent',
         '\n',
         key.strip(),
         '\n',
