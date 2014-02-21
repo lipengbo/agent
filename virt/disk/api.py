@@ -330,19 +330,38 @@ def _inject_key_into_fs(key, fs):
     fs.set_permissions(sshdir, 0o700)
 
     keyfile = os.path.join(sshdir, 'authorized_keys')
-
-    key_data = ''.join([
-        '\n',
-        '# The following ssh key was injected by ccf-Agent',
-        '\n',
-        key.strip(),
-        '\n',
-    ])
-
+    key_data = key + '\n'
     _inject_file_into_fs(fs, keyfile, key_data, append=True)
     fs.set_permissions(keyfile, 0o600)
 
-    _setup_selinux_for_keys(fs, sshdir)
+    #_setup_selinux_for_keys(fs, sshdir)
+
+
+def _delete_key_from_fs(key, fs):
+    LOG.debug("Delete key fs=%(fs)s key=%(key)s" % {'fs': fs, 'key': key})
+    sshdir = os.path.join('root', '.ssh')
+    keyfile = os.path.join(sshdir, 'authorized_keys')
+    abspath_keyfile = fs.has_file(keyfile)
+    #fs.make_path(sshdir)
+    if abspath_keyfile:
+        fs.set_ownership(sshdir, "root", "root")
+        fs.set_permissions(sshdir, 0o700)
+        file_data = []
+        LOG.debug('--------------------------------')
+        LOG.debug(abspath_keyfile)
+        LOG.debug(type(abspath_keyfile))
+        LOG.debug(fs.read_file(keyfile))
+        LOG.debug('--------------------------------')
+        with open(abspath_keyfile, 'r') as f:
+            for line in f:
+                LOG.debug('---------------%s------%s-----------' % (key.strip(), line.strip()))
+                LOG.debug('---------------%s-----------------' % key.strip() == line.strip())
+                if key.strip() != line.strip():
+                    file_data.append(line)
+        key_data = ''.join(file_data)
+        _inject_file_into_fs(fs, keyfile, key_data, append=False)
+        fs.set_permissions(keyfile, 0o600)
+        #_setup_selinux_for_keys(fs, sshdir)
 
 
 def _inject_net_into_fs(net, fs):

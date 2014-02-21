@@ -6,6 +6,8 @@
 # E-mail:lipengbo10054444@gmail.com
 import traceback
 from virt.libvirtConn import LibvirtConnection
+from virt.disk.api import inject_data
+#from virt.disk.vfs import api as vfs
 from common.ccf_client import CCFClient
 from etc import config
 from etc import constants
@@ -67,6 +69,28 @@ class ComputeManager(object):
                 conn.delete_vm(vname)
         except:
             LOG.error(traceback.print_exc())
+
+    @staticmethod
+    def add_sshkeys(vname, keys):
+        vm_home = config.image_path + vname
+        image = vm_home + '/disk'
+        inject_data(image, keys)
+
+    @staticmethod
+    def delete_sshkeys(vname, keys):
+        pass
+        #vm_home = config.image_path + vname
+        #image = vm_home + '/disk'
+        #try:
+            #fs = vfs.VFS.instance_for_image(image, 'qcow2', partition=1)
+            #fs.setup()
+        #except Exception as e:
+            #LOG.warn("Ignoring error injecting data into image (%(e)s)" % {'e': e})
+            #return False
+        #try:
+            #return _delete_key_from_fs(keys, fs)
+        #finally:
+            #fs.teardown()
 
 
 from twisted.web import xmlrpc
@@ -132,3 +156,15 @@ class ComputeService(xmlrpc.XMLRPC):
             import traceback
             LOG.debug(traceback.print_exc())
             return config.domain_count_infinity
+
+    def xmlrpc_add_sshkeys(self, vname, key=None):
+        add_sshkeys = ComputeManager.add_sshkeys
+        t = threading.Thread(target=add_sshkeys, args=(vname, key))
+        t.start()
+        return True
+
+    def xmlrpc_delete_sshkeys(self, vname, key=None):
+        delete_sshkeys = ComputeManager.delete_sshkeys
+        t = threading.Thread(target=delete_sshkeys, args=(vname, key))
+        t.start()
+        return True
