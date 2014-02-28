@@ -42,7 +42,7 @@ class VFSLocalFS(vfs.VFS):
     raw, it will use the loopback mount impl, otherwise it will
     use the qemu-nbd impl.
     """
-    def __init__(self, imgfile, imgfmt="raw", partition=None, imgdir=None):
+    def __init__(self, imgfile, imgfmt="qcow2", partition=None, imgdir=None):
         super(VFSLocalFS, self).__init__(imgfile, imgfmt, partition)
 
         self.imgdir = imgdir

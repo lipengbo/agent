@@ -17,7 +17,7 @@
     <devices>
         #set $root_disk_bus = 'virtio'
         <disk type='file' device='disk'>
-            <driver type='qcow2'/>
+            <driver type='qcow2' cache='none'/>
             <source file='${basepath}/disk'/>
             <target dev='vda' bus='${root_disk_bus}'/>
         </disk>

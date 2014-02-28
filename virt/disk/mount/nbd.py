@@ -63,15 +63,15 @@ class NbdMount(api.Mount):
         if not device:
             return False
 
-        # NOTE(mikal): qemu-nbd will return an error if the device file is
+        #qemu-nbd will return an error if the device file is
         # already in use.
         LOG.debug("Get nbd device %(dev)s for %(imgfile)s" %
                   {'dev': device, 'imgfile': self.image})
-        _out, err = utils.trycmd('qemu-nbd', '-c', device, self.image,
+        _out, err = utils.trycmd('qemu-nbd', '-n', '-c', device, self.image,
                                  run_as_root=True)
         if err:
             self.error = "qemu-nbd error: %s" % err
-            LOG.info("NBD mount error: %s" % self.error)
+            LOG.debug("NBD mount error: %s" % self.error)
             return False
 
         # NOTE(vish): this forks into another process, so give it a chance
@@ -84,7 +84,7 @@ class NbdMount(api.Mount):
             time.sleep(1)
         else:
             self.error = "nbd device %s did not show up" % device
-            LOG.info("NBD mount error: %s" % self.error)
+            LOG.debug("NBD mount error: %s" % self.error)
 
             # Cleanup
             _out, err = utils.trycmd('qemu-nbd', '-d', device,

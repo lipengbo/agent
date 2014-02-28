@@ -30,7 +30,7 @@ class VFS(object):
                 "virt.disk.vfs.guestfs.VFSGuestFS",
                 imgfile, imgfmt, partition)
         else:
-            LOG.debug("Falling back to VFSLocalFS")
+            LOG.debug("Using primary VFSLocalFS")
             return import_object(
                 "virt.disk.vfs.localfs.VFSLocalFS",
                 imgfile, imgfmt, partition)

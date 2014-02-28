@@ -124,14 +124,12 @@ class Mount(object):
         """Map partitions of the device to the file system namespace."""
         assert(os.path.exists(self.device))
         LOG.debug("Map dev %s" % self.device)
-        automapped_path = '/dev/%sp%s' % (os.path.basename(self.device),
-                                          self.partition)
+        automapped_path = '/dev/%sp%s' % (os.path.basename(self.device), self.partition)
 
         if self.partition == -1:
             self.error = "partition search unsupported with %s" % self.mode
         elif self.partition and not os.path.exists(automapped_path):
-            map_path = '/dev/mapper/%sp%s' % (os.path.basename(self.device),
-                                              self.partition)
+            map_path = '/dev/mapper/%sp%s' % (os.path.basename(self.device), self.partition)
             assert(not os.path.exists(map_path))
 
             # Note kpartx can output warnings to stderr and succeed
@@ -203,6 +201,7 @@ class Mount(object):
         finally:
             if not status:
                 LOG.debug("Fail to mount, tearing back down")
+                LOG.error(self.error)
                 self.do_teardown()
         return status
 
