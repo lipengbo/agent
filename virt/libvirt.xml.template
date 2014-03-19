@@ -5,9 +5,14 @@
     <vcpu>${cpus}</vcpu>
     <os>
         <type>hvm</type>
+        <kernel>${basepath}/vmlinuz-3.5.0-47-generic</kernel>
+        <initrd>${basepath}/initrd.img-3.5.0-47-generic</initrd>
+        <cmdline>root=LABEL=cloudimg-rootfs rw console=ttyS0</cmdline>
+<!--
         <boot dev="hd" />
         <boot dev="cdrom" />
         <bootmenu enable='yes'/>
+-->
     </os>
     <features>
         <acpi/>
@@ -17,7 +22,7 @@
     <devices>
         #set $root_disk_bus = 'virtio'
         <disk type='file' device='disk'>
-            <driver type='qcow2' cache='none'/>
+            <driver type='raw'/>
             <source file='${basepath}/disk'/>
             <target dev='vda' bus='${root_disk_bus}'/>
         </disk>
@@ -29,6 +34,18 @@
             <target dev='${nic['dev']}'/>
         </interface>
 #end for
+        <serial type="file">
+                <source path='${basepath}/console.log'/>
+                <target port='1'/>
+        </serial>
+        <console type='pty' tty='/dev/pts/2'>
+                <source path='/dev/pts/2'/>
+                <target port='0'/>
+        </console>
+        <serial type='pty'>
+                <source path='/dev/pts/2'/>
+                <target port='0'/>
+        </serial>
         <graphics type='vnc' port='-1' autoport='yes' listen='0.0.0.0'/>
     </devices>
 </domain>
