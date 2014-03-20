@@ -5,11 +5,11 @@
     <vcpu>${cpus}</vcpu>
     <os>
         <type>hvm</type>
+        <boot dev="hd" />
+<!--
         <kernel>${basepath}/vmlinuz-3.5.0-47-generic</kernel>
         <initrd>${basepath}/initrd.img-3.5.0-47-generic</initrd>
         <cmdline>root=LABEL=cloudimg-rootfs rw console=ttyS0</cmdline>
-<!--
-        <boot dev="hd" />
         <boot dev="cdrom" />
         <bootmenu enable='yes'/>
 -->
@@ -34,6 +34,7 @@
             <target dev='${nic['dev']}'/>
         </interface>
 #end for
+<!--
         <serial type="file">
                 <source path='${basepath}/console.log'/>
                 <target port='1'/>
@@ -46,6 +47,7 @@
                 <source path='/dev/pts/2'/>
                 <target port='0'/>
         </serial>
+-->
         <graphics type='vnc' port='-1' autoport='yes' listen='0.0.0.0'/>
     </devices>
 </domain>

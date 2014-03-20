@@ -236,4 +236,5 @@ def create_cow_image(backing_file, path, size_gb):
     :param backing_file: Existing image on which to base the COW image
     :param path: Desired location of the COW image
     """
-    return utils.execute('qemu-img', 'create', '-f', 'qcow2', '-o', 'backing_file=%s' % backing_file, path)
+    #return utils.execute('qemu-img', 'create', '-f', 'qcow2', '-o', 'backing_file=%s' % backing_file, path)
+    return utils.execute('qemu-img', 'convert', '-f', 'qcow2', '-O', 'raw', backing_file, path)
