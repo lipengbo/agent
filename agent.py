@@ -15,6 +15,7 @@ from common import log as logging
 LOG = logging.getLogger("agent.virt")
 
 
+import pdb; pdb.set_trace()  # XXX BREAKPOINT
 def start_service():
     if config.compute_service:
         service = server.Site(ComputeService())
