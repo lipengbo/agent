@@ -1,4 +1,4 @@
-<domain type='qemu'>
+<domain type='qemu' xmlns:qemu='http://libvirt.org/schemas/domain/qemu/1.0'>
     <uuid>${name}</uuid>
     <name>${name}</name>
     <memory>${mem}</memory>
@@ -20,6 +20,7 @@
         <pae/>
     </features>
     <devices>
+        <emulator>/usr/bin/qemu-system-x86_64</emulator>
         #set $root_disk_bus = 'virtio'
         <disk type='file' device='disk'>
             <driver type='raw' cache='none'/>
@@ -36,18 +37,21 @@
 #end for
 <!--
         <serial type="file">
-                <source path='${basepath}/console.log'/>
-                <target port='1'/>
+           <source path='${basepath}/console.log'/>
+           <target port='1'/>
         </serial>
         <console type='pty' tty='/dev/pts/2'>
-                <source path='/dev/pts/2'/>
-                <target port='0'/>
+            <source path='/dev/pts/2'/>
+            <target port='0'/>
         </console>
         <serial type='pty'>
-                <source path='/dev/pts/2'/>
-                <target port='0'/>
+            <source path='/dev/pts/2'/>
+            <target port='0'/>
         </serial>
 -->
         <graphics type='vnc' port='-1' autoport='yes' listen='0.0.0.0'/>
     </devices>
+  <qemu:commandline>
+      <qemu:arg value='--enable-kvm'/>
+  </qemu:commandline>
 </domain>
