@@ -5,3 +5,4 @@ psutil
 django==1.4.5
 Cheetah==2.4.4
 python-gflags==1.3
+sqlalchemy==0.7.9
