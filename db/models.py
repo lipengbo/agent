@@ -8,8 +8,8 @@ import os
 import random
 import traceback
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, String, Integer, ForeignKey, create_engine, PickleType
-from sqlalchemy.orm import sessionmaker, scoped_session
+from sqlalchemy import Column, String, Integer, ForeignKey, create_engine
+from sqlalchemy.orm import sessionmaker, scoped_session, relationship, backref
 from sqlalchemy.event import listens_for
 from etc.config import disks_mountpoint
 from common import log as logging
@@ -22,38 +22,6 @@ Base = declarative_base()
 Session = scoped_session(sessionmaker(bind=engine))
 
 
-class Disk(Base):
-    __tablename__ = 'disk'
-    id = Column(Integer, autoincrement=True, primary_key=True)
-    dev = Column(String(150))
-    mount_point = Column(String(255))
-
-
-class Instance(Base):
-    __tablename__ = 'instance'
-    id = Column(Integer, autoincrement=True, primary_key=True)
-    uuid = Column(String(128), unique=True)
-    disk = Column(None, ForeignKey('disk.id'))
-    vmInfo = Column(PickleType, nullable=True)
-    sshkey = Column(String(1024), nullable=True)
-    state = Column(Integer(2))
-
-
-def transactional(fn):
-    """add a transactional semantics to a method"""
-
-    def transact(*args):
-        session = Session()
-        try:
-            fn(session, *args)
-            session.commit()
-        except:
-            session.rollback()
-            raise
-    transact.__name__ = fn.__name__
-    return transact
-
-
 def init_repository():
     Base.metadata.create_all(engine)
     session = Session()
@@ -63,71 +31,123 @@ def init_repository():
     session.commit()
 
 
-@listens_for(Instance, 'before_insert')
-def before_insert_instance(mapper, connection, target):
+def transactional(fn):
+    """add a transactional semantics to a method"""
+
+    def transact(self, *args):
+        session = Session()
+        try:
+            fn(self, session, *args)
+            session.commit()
+        except:
+            session.rollback()
+            raise
+    transact.__name__ = fn.__name__
+    return transact
+
+
+class Disk(Base):
+    __tablename__ = 'disk'
+    dev = Column(String(150), primary_key=True)
+    mount_point = Column(String(255))
+
+    @classmethod
+    @transactional
+    def get_all_disks(cls, session, *args):
+        print '-------------------'
+        print cls
+        print type(cls)
+        print session
+        print args
+        disks = session.query(cls).all()
+        print disks
+        print '-------------------'
+        return disks
+
+    @classmethod
+    @transactional
+    def get_suitable_disk(cls, session, *args):
+        disks = cls.get_all_disks()
+        random.shuffle(disks)
+        return disks
+
+
+class Domain(Base):
+    __tablename__ = 'domain'
+    name = Column(String(128), primary_key=True)
+    mem = Column(Integer)
+    cpus = Column(Integer)
+    hdd = Column(Integer, default=10)
+    base_image = Column(String(128))
+    glance_url = Column(String(1024))
+    sshkey = Column(String(1024), nullable=True)
+    vm_type = Column(Integer(2), default=1)
+    disk_dev = Column(Integer, ForeignKey('disk.dev'))
+    disk = relationship(Disk, backref=backref('domain', order_by=name))
+    state = Column(Integer(2))
+
+    @transactional
+    def save(self, session, *args):
+        self.disk = Disk.get_suitable_disk()
+        session.add(self)
+
+    @transactional
+    def update(self, session, *args):
+        name = args[0]
+        domain = session.query(Domain).filter_by(uuid=name).first()
+        domain.state = args[1]
+        session.add(domain)
+
+    @transactional
+    def delete_domain(session, *args):
+        name = args[0]
+        domain = session.query(Domain).filter_by(uuid=name).first()
+        session.delete(domain)
+
+
+@listens_for(Domain, 'before_insert')
+def before_insert_domain(mapper, connection, target):
     try:
-        LOG.error('---------enter---before insert instance------------')
+        LOG.error('---------enter---before insert domain------------')
         LOG.error(mapper)
         LOG.error(connection)
         LOG.error(target.vmInfo['name'])
-        LOG.error('---------leave---before insert instance------------')
+        LOG.error('---------leave---before insert domain------------')
     except:
         LOG.error(traceback.print_exc())
 
 
-@listens_for(Instance, 'after_insert')
-def after_insert_instance(mapper, connection, target):
-    LOG.error('---------enter---after insert instance------------')
+@listens_for(Domain, 'after_insert')
+def after_insert_domain(mapper, connection, target):
+    LOG.error('---------enter---after insert domain------------')
     LOG.error(mapper)
     LOG.error(connection)
     LOG.error(target)
-    LOG.error('---------leave---after insert instance------------')
+    LOG.error('---------leave---after insert domain------------')
 
 
-@listens_for(Instance, 'before_delete')
-def before_delete_instance(mapper, connection, target):
-    LOG.error('---------enter---before delete instance------------')
+@listens_for(Domain, 'before_update')
+def before_update_domain(mapper, connection, target):
+    LOG.error('---------enter---before update domain------------')
     LOG.error(mapper)
     LOG.error(connection)
     LOG.error(target)
-    LOG.error('---------leave---before delete instance------------')
+    LOG.error('---------leave---before update domain------------')
 
 
-@listens_for(Instance, 'before_update')
-def before_update_instance(mapper, connection, target):
-    LOG.error('---------enter---before update instance------------')
+@listens_for(Domain, 'after_update')
+def after_update_domain(mapper, connection, target):
+    LOG.error('---------enter---after update domain------------')
     LOG.error(mapper)
     LOG.error(connection)
     LOG.error(target)
-    LOG.error('---------leave---before update instance------------')
+    LOG.error('---------leave---after update domain------------')
 
 
-@listens_for(Instance, 'after_update')
-def after_update_instance(mapper, connection, target):
-    LOG.error('---------enter---after update instance------------')
+@listens_for(Domain, 'before_delete')
+def before_delete_domain(mapper, connection, target):
+    LOG.error('---------enter---before delete domain------------')
     LOG.error(mapper)
     LOG.error(connection)
     LOG.error(target)
-    LOG.error('---------leave---after update instance------------')
-
-
-@transactional
-def create_instance(session, *args):
-    disks = session.query(Disk.id).all()
-    random.shuffle(disks)
-    LOG.error('---------%s------------' % type(args[0]))
-    recoder = Instance(uuid=args[0]['name'], disk=disks[0][0], vmInfo=args[0], sshkey=args[1], state=args[2])
-    session.add(recoder)
-
-
-@transactional
-def update_instance(session, *args):
-    instance = session.query(Instance).filter_by(uuid=args[0]).first()
-    instance.state = args[1]
-    session.add(instance)
-
-
-@transactional
-def delete_instance(session, *args):
-    instance = session.query(Instance).filter_by(uuid=args[0]).first()
-    session.delete(instance)
+    LOG.error('---------leave---before delete domain------------')
