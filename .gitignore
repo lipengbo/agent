@@ -27,5 +27,6 @@ pip-log.txt
 .project
 .pydevproject
 # bak file
+agent.db
 ip.bak
 iptables.bak

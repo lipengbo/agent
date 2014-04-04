@@ -5,6 +5,7 @@
 # Author:Pengbo Li
 # E-mail:lipengbo10054444@gmail.com
 import traceback
+import threading
 from virt.libvirtConn import LibvirtConnection
 from virt.disk.api import inject_data
 #from virt.disk.vfs import api as vfs
@@ -12,7 +13,7 @@ from common.ccf_client import CCFClient
 from etc import config
 from etc import constants
 from common import log as logging
-import threading
+#from db.models import create_instance
 LOG = logging.getLogger("agent")
 
 
@@ -41,6 +42,7 @@ class ComputeManager(object):
                 'type': 0 for controller; 1 for vm; 2 for gateway
             }
         """
+        #create_instance(vmInfo, key, 0)
         try:
             LibvirtConnection.create_vm(vmInfo=vmInfo, key=key)
             state = constants.DOMAIN_STATE['nostate']

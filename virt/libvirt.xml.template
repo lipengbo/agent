@@ -23,7 +23,7 @@
         <emulator>/usr/bin/qemu-system-x86_64</emulator>
         #set $root_disk_bus = 'virtio'
         <disk type='file' device='disk'>
-            <driver type='raw' cache='none'/>
+            <driver type='qcow2' cache='writeback' aio='native'/>
             <source file='${basepath}/disk'/>
             <target dev='vda' bus='${root_disk_bus}'/>
         </disk>
@@ -33,6 +33,7 @@
             <mac address='${nic['mac_address']}'/>
             <virtualport type="openvswitch"></virtualport>
             <target dev='${nic['dev']}'/>
+            <model type='virtio' />
         </interface>
 #end for
 <!--

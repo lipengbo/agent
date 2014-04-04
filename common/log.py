@@ -28,7 +28,7 @@ LOGGING = {
         'default': {
             'level': 'DEBUG',
             'class': 'logging.handlers.RotatingFileHandler',
-            'filename': './logs/ceni_agent.log',
+            'filename': '/var/log/ceni_agent.log',
             'maxBytes': 1024 * 1024 * 5,
             'backupCount': 5,
             'formatter': 'standard',
@@ -55,9 +55,10 @@ LOGGING = {
 
 
 def mklogdir():
-    import os
-    if not os.path.exists('./logs'):
-        os.mkdir('./logs')
+    #import os
+    #if not os.path.exists('./logs'):
+        #os.mkdir('./logs')
+    pass
 
 
 def getLogger(name):

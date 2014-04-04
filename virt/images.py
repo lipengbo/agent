@@ -191,8 +191,11 @@ def fetch_with_urllib2(url, target):
 
 
 def fetch_with_wget(url, target):
-    cmd = ('wget', '-c', '--timeout=3', '-t', '5', url, '-O', target)
+    cmd = ('wget', '-c', '--timeout=3', '-t', '5', url, '-O', target + '.qcow2')
     utils.execute(*cmd)
+    if not os.path.exists(target):
+        cmd = ('qemu-img', 'convert', target + '.qcow2', target)
+        utils.execute(*cmd)
 
 
 def fetch(url, target, method=fetch_with_wget):
@@ -236,5 +239,5 @@ def create_cow_image(backing_file, path, size_gb):
     :param backing_file: Existing image on which to base the COW image
     :param path: Desired location of the COW image
     """
-    #return utils.execute('qemu-img', 'create', '-f', 'qcow2', '-o', 'backing_file=%s' % backing_file, path)
-    return utils.execute('qemu-img', 'convert', '-f', 'qcow2', '-O', 'raw', backing_file, path)
+    return utils.execute('qemu-img', 'create', '-f', 'qcow2', '-o', 'backing_file=%s,cluster_size=2097152' % backing_file, path)
+    #return utils.execute('qemu-img', 'convert', '-f', 'qcow2', '-O', 'raw', backing_file, path)

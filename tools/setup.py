@@ -8,6 +8,7 @@ import os
 import sys
 sys.path.insert(0, '../')
 from common import utils
+from db.models import init_repository
 
 
 AGENTHOME = os.path.abspath(os.path.pardir)
@@ -60,10 +61,13 @@ if len(sys.argv) == 2:
         print new_agent_home
         if os.path.exists(new_agent_home):
             os.remove(new_agent_home)
+    elif sys.argv[1] == 'syncdb':
+        init_repository()
+        sys.exit(0)
     else:
-        print 'unknown option, install|uninstall'
+        print 'unknown option, install|uninstall|syncdb'
         sys.exit(1)
     init_cmd = 'initctl reload-configuration'
     utils.execute(init_cmd)
 else:
-    print 'usage: python setup.py install|uninstall'
+    print 'usage: python setup.py install|uninstall|syncdb'
