@@ -26,6 +26,10 @@
             <driver type='qcow2' cache='writeback' aio='native'/>
             <source file='${basepath}/disk'/>
             <target dev='vda' bus='${root_disk_bus}'/>
+            <iotune>
+                    <write_bytes_sec>150000000</write_bytes_sec>
+                    <read_bytes_sec>500000000</read_bytes_sec>
+            </iotune>
         </disk>
 #for $nic in $nics
         <interface type='bridge'>
