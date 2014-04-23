@@ -37,7 +37,9 @@
             <mac address='${nic['mac_address']}'/>
             <virtualport type="openvswitch"></virtualport>
             <target dev='${nic['dev']}'/>
+        <!--
             <model type='virtio' />
+        -->
         </interface>
 #end for
 <!--

@@ -16,7 +16,7 @@ ovs_service = 1
 #[common]
 control_br = 'br100'
 data_br = 'br1'
-gw_br = control_br
+gw_br = data_br
 
 #[compute service]
 compute_service_port = 8886
