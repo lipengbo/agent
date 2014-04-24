@@ -154,9 +154,9 @@ class LibvirtConnection(object):
         if action == 'create' and ofport_request:
             portname = 'vdata-%s' % vname[0:8]
             LibvirtOpenVswitchDriver.set_vm_ofport(portname, ofport_request)
-        getattr(dom, action)()
         if action == 'destroy':
             LibvirtOpenVswitchDriver.del_vm_port(vname)
+        getattr(dom, action)()
 
     @staticmethod
     def prepare_libvirt_xml(vmInfo):
