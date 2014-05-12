@@ -17,4 +17,11 @@ iface ${ifc['name']} inet static
         gateway ${ifc['gateway']}
         dns-nameservers ${ifc['dns']}
 #end if
+
+#if $ifc['vm_type'] == 0
+        broadcast ${ifc['broadcast']}
+        gateway ${ifc['gateway']}
+        dns-nameservers ${ifc['dns']}
+#end if
+
 #end for

@@ -304,6 +304,7 @@ class LibvirtConnection(object):
                 ifc['broadcast'] = str(netaddr_network.broadcast)
                 ifc['gateway'] = net.get('gateway', netaddr_network.get_first_host())
                 ifc['dns'] = vmInfo.pop('dns', '8.8.8.8')
+                ifc['vm_type'] = vm_type
                 interfaces.append(ifc)
                 interfaces.reverse()
                 net_dev_index = net_dev_index + 1
