@@ -12,6 +12,7 @@ import os
 compute_service = 1
 monitor_service = 1
 ovs_service = 1
+vpn_service = 1
 
 #[common]
 control_br = 'br100'
@@ -28,6 +29,9 @@ sFlow_service = 'http://192.168.5.24:8008/'
 #[ovs service]
 ovs_service_port = 8889
 controller_bin_path = '/usr/local/floodloght/target'
+
+#[vpn service]
+vpn_service_port = 8890
 
 #[ccf]
 ccf_ip = '192.168.5.9'

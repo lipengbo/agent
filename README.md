@@ -45,6 +45,11 @@ ovs service
   1. 提供远程操作ovs的能力
   2. 提供ovs监控信息
 
+vpn service
+------------
+### 功能
+  1.提供vpn服务，向vpn server中添加路由
+
 gateway service
 ---------------
 ### 功能

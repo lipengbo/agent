@@ -24,6 +24,14 @@ class AgentClient(object):
         client = get_rpc_client(self.ip, config.compute_service_port)
         return client.get_vnc_port(vname)
 
+    def add_route_to_vpnserver(self, net, gw):
+        client = get_rpc_client(self.ip, config.vpn_service_port)
+        return client.add_route(net, gw)
+
+    def del_route_from_vpnserver(self, net, gw):
+        client = get_rpc_client(self.ip, config.vpn_service_port)
+        return client.del_route(net, gw)
+
     def create_vm(self, vmInfo, key=None):
         """
         vmInfo:

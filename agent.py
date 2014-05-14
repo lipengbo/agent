@@ -10,6 +10,7 @@ from twisted.web import server
 from service.ovs_service import DeviceCommService
 from service.monitor import MonitorService
 from service.compute import ComputeService
+from service.vpn_tools import VPNService
 from etc import config
 from common import log as logging
 LOG = logging.getLogger("agent.virt")
@@ -25,6 +26,9 @@ def start_service():
     if config.monitor_service:
         service = server.Site(MonitorService())
         reactor.listenTCP(config.monitor_service_port, service)
+    if config.vpn_service:
+        service = server.Site(VPNService())
+        reactor.listenTCP(config.vpn_service_port, service)
     try:
         reactor.run()
     except Exception:
