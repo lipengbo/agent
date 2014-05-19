@@ -15,9 +15,9 @@ ovs_service = 1
 vpn_service = 1
 
 #[common]
-control_br = 'br100'
-data_br = 'br1'
-gw_br = data_br
+control_br = 'br1'
+data_br = 'br0'
+gw_br = control_br
 
 #[compute service]
 compute_service_port = 8886
@@ -34,7 +34,7 @@ controller_bin_path = '/usr/local/floodloght/target'
 vpn_service_port = 8890
 
 #[ccf]
-ccf_ip = '192.168.5.9'
+ccf_ip = '192.168.5.45'
 ccf_port = 8000
 
 
