@@ -12,6 +12,7 @@ from service.monitor import MonitorService
 from service.compute import ComputeService
 from service.vpn_tools import VPNService
 from etc import config
+from virt.libvirt_event import domainEventThread
 from common import log as logging
 LOG = logging.getLogger("agent.virt")
 
@@ -30,6 +31,7 @@ def start_service():
         service = server.Site(VPNService())
         reactor.listenTCP(config.vpn_service_port, service)
     try:
+        domainEventThread()
         reactor.run()
     except Exception:
         LOG.error(traceback.print_exc())
