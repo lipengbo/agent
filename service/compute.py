@@ -94,6 +94,15 @@ class ComputeManager(object):
         #finally:
             #fs.teardown()
 
+    @staticmethod
+    def start_vms(vname, action, ofport):
+        conn = LibvirtConnection()
+        try:
+            conn.do_action(vname, action, ofport_request=ofport)
+            return True
+        except:
+            return False
+
 
 from twisted.web import xmlrpc
 

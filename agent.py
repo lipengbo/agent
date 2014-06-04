@@ -9,8 +9,9 @@ from twisted.internet import reactor
 from twisted.web import server
 from service.ovs_service import DeviceCommService
 from service.monitor import MonitorService
-from service.compute import ComputeService
+from service.compute import ComputeService, ComputeManager
 from service.vpn_tools import VPNService
+from db.models import Domain
 from etc import config
 from virt.libvirt_event import domainEventThread
 from common import log as logging
@@ -32,6 +33,7 @@ def start_service():
         reactor.listenTCP(config.vpn_service_port, service)
     try:
         domainEventThread()
+        Domain.start_vms(ComputeManager.start_vms)
         reactor.run()
     except Exception:
         LOG.error(traceback.print_exc())
