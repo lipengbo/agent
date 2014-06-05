@@ -19,6 +19,7 @@ from virt.ipam import netaddr
 #import exception
 from common import log as logging
 from etc import constants
+from db.models import Domain
 LOG = logging.getLogger("agent.virt")
 VM_TYPE = {'controller': 0, 'slice_vm': 1, 'gateway': 2}
 
@@ -151,12 +152,16 @@ class LibvirtConnection(object):
     def do_action(self, vname, action, ofport_request=None):
         dom = self.get_instance(vname)
         #op_supported = ('create', 'suspend', 'undefine', 'resume', 'destroy')
+        state = None
         if action == 'create' and ofport_request:
             portname = 'vdata-%s' % vname[0:8]
             LibvirtOpenVswitchDriver.set_vm_ofport(portname, ofport_request)
+            state = 2
         if action == 'destroy':
             LibvirtOpenVswitchDriver.del_vm_port(vname)
+            state = 5
         getattr(dom, action)()
+        Domain.update(vname, ofport_request, state)
 
     @staticmethod
     def prepare_libvirt_xml(vmInfo):
@@ -339,6 +344,14 @@ class LibvirtConnection(object):
                 shutil.rmtree(vm_home)
             #ovs_driver.unplug(vmInfo['name'])
             raise
+        #step 6: insert vm recorder into db
+        try:
+            domain = Domain()
+            domain.name = vmInfo['name']
+            domain.state = 0
+            domain.save()
+        except:
+            pass
         finally:
             try:
                 conn.close()
@@ -357,3 +370,8 @@ class LibvirtConnection(object):
         vm_home = config.image_path + vname
         if os.path.exists(vm_home):
             shutil.rmtree(vm_home)
+        #step 4: delete vm in db
+        try:
+            Domain.delete(vname)
+        except:
+            pass

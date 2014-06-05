@@ -6,12 +6,12 @@
 # E-mail:lipengbo10054444@gmail.com
 import os
 import random
-import traceback
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, String, Integer, ForeignKey, create_engine
-from sqlalchemy.orm import sessionmaker, scoped_session, relationship, backref
-from sqlalchemy.event import listens_for
-from etc.config import disks_mountpoint
+#from sqlalchemy import ForeignKey
+#from sqlalchemy.orm import relationship, backref
+from sqlalchemy import Column, String, Integer, create_engine
+from sqlalchemy.orm import sessionmaker, scoped_session
+#from etc.config import disks_mountpoint
 from common import log as logging
 LOG = logging.getLogger("agent.db")
 
@@ -25,9 +25,9 @@ Session = scoped_session(sessionmaker(bind=engine))
 def init_repository():
     Base.metadata.create_all(engine)
     session = Session()
-    for dev, mountpoint in disks_mountpoint:
-        record = Disk(dev=dev, mount_point=mountpoint)
-        session.add(record)
+    #for dev, mountpoint in disks_mountpoint:
+        #record = Disk(dev=dev, mount_point=mountpoint)
+        #session.add(record)
     session.commit()
 
 
@@ -75,79 +75,45 @@ class Disk(Base):
 class Domain(Base):
     __tablename__ = 'domain'
     name = Column(String(128), primary_key=True)
-    mem = Column(Integer)
-    cpus = Column(Integer)
-    hdd = Column(Integer, default=10)
-    base_image = Column(String(128))
-    glance_url = Column(String(1024))
-    sshkey = Column(String(1024), nullable=True)
-    vm_type = Column(Integer(2), default=1)
-    disk_dev = Column(Integer, ForeignKey('disk.dev'))
-    disk = relationship(Disk, backref=backref('domain', order_by=name))
+    #mem = Column(Integer, nullable=True)
+    #cpus = Column(Integer, nullable=True)
+    #hdd = Column(Integer, default=10)
+    #base_image = Column(String(128), nullable=True)
+    #glance_url = Column(String(1024), nullable=True)
+    #sshkey = Column(String(1024), nullable=True)
+    #vm_type = Column(Integer(2), default=1)
+    #disk_dev = Column(Integer, ForeignKey('disk.dev'))
+    #disk = relationship(Disk, backref=backref('domain', order_by=name))
+    ofport = Column(Integer(5), nullable=True)
     state = Column(Integer(2))
 
     @transactional
     def save(self, session, *args):
-        self.disk = Disk.get_suitable_disk()
         session.add(self)
 
+    @classmethod
     @transactional
-    def update(self, session, *args):
+    def update(cls, session, *args):
         name = args[0]
-        domain = session.query(Domain).filter_by(uuid=name).first()
-        domain.state = args[1]
+        ofport = args[1]
+        state = args[2]
+        domain = session.query(cls).filter_by(name=name).first()
+        if ofport:
+            domain.ofport = ofport
+        if state:
+            domain.state = state
         session.add(domain)
 
+    @classmethod
     @transactional
-    def delete_domain(session, *args):
+    def delete(cls, session, *args):
         name = args[0]
-        domain = session.query(Domain).filter_by(uuid=name).first()
+        domain = session.query(cls).filter_by(name=name).first()
         session.delete(domain)
 
-
-@listens_for(Domain, 'before_insert')
-def before_insert_domain(mapper, connection, target):
-    try:
-        LOG.error('---------enter---before insert domain------------')
-        LOG.error(mapper)
-        LOG.error(connection)
-        LOG.error(target.vmInfo['name'])
-        LOG.error('---------leave---before insert domain------------')
-    except:
-        LOG.error(traceback.print_exc())
-
-
-@listens_for(Domain, 'after_insert')
-def after_insert_domain(mapper, connection, target):
-    LOG.error('---------enter---after insert domain------------')
-    LOG.error(mapper)
-    LOG.error(connection)
-    LOG.error(target)
-    LOG.error('---------leave---after insert domain------------')
-
-
-@listens_for(Domain, 'before_update')
-def before_update_domain(mapper, connection, target):
-    LOG.error('---------enter---before update domain------------')
-    LOG.error(mapper)
-    LOG.error(connection)
-    LOG.error(target)
-    LOG.error('---------leave---before update domain------------')
-
-
-@listens_for(Domain, 'after_update')
-def after_update_domain(mapper, connection, target):
-    LOG.error('---------enter---after update domain------------')
-    LOG.error(mapper)
-    LOG.error(connection)
-    LOG.error(target)
-    LOG.error('---------leave---after update domain------------')
-
-
-@listens_for(Domain, 'before_delete')
-def before_delete_domain(mapper, connection, target):
-    LOG.error('---------enter---before delete domain------------')
-    LOG.error(mapper)
-    LOG.error(connection)
-    LOG.error(target)
-    LOG.error('---------leave---before delete domain------------')
+    @classmethod
+    @transactional
+    def start_vms(cls, session, func):
+        domains = session.query(cls).filter_by(state=2)
+        for dom in domains:
+            func(dom.name, 'create', dom.ofport)
