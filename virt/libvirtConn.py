@@ -153,9 +153,10 @@ class LibvirtConnection(object):
         dom = self.get_instance(vname)
         #op_supported = ('create', 'suspend', 'undefine', 'resume', 'destroy')
         state = None
-        if action == 'create' and ofport_request:
-            portname = 'vdata-%s' % vname[0:8]
-            LibvirtOpenVswitchDriver.set_vm_ofport(portname, ofport_request)
+        if action == 'create':
+            if ofport_request:
+                portname = 'vdata-%s' % vname[0:8]
+                LibvirtOpenVswitchDriver.set_vm_ofport(portname, ofport_request)
             state = 2
         if action == 'destroy':
             LibvirtOpenVswitchDriver.del_vm_port(vname)
