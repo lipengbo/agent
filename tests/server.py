@@ -143,26 +143,17 @@ def test_get_portid_by_name():
 
 
 def test():
-    print '---------------------------- start host info ----------------------------------'
-    print get_host_info()
-    print '---------------------------- end host info ----------------------------------'
-    print '---------------------------- start host status ----------------------------------'
-    print get_host_status()
-    print '---------------------------- end host status ----------------------------------'
-    print '---------------------------- start create vm ----------------------------------'
-    print create_vm()
-    print '---------------------------- end create vm ----------------------------------'
-    get_all_domains_status()
-    print '---------------------------- start get instances count ----------------------------------'
-    print get_instances_count()
-    print '---------------------------- end get instances count ----------------------------------'
-    vname = 'fe0aa044-da47-4722-ab88-57d05852a3d9'
-    print '---------------------------- start do domain action ----------------------------------'
-    print do_domain_action(vname, 'create')
-    print '---------------------------- end do domain action ----------------------------------'
-    print '---------------------------- start get domain state ----------------------------------'
-    print get_domain_state(vname)
-    print '---------------------------- end get domain state ----------------------------------'
-    print '---------------------------- start get vnc port ----------------------------------'
-    print get_vnc_port(vname)
-    print '---------------------------- end get vnc port ----------------------------------'
+    agent = AgentClient('127.0.0.1')
+    vname = 'test_snapshot'
+    #print '---------------------------- start create snapshot snap1 ----------------------------------'
+    #agent.create_snapshot(vname, 'snap1')
+    #print '---------------------------- stop create snapshot snap1 ----------------------------------'
+    #print '---------------------------- get current snapshot %s ----------------------------------' % agent.get_current_snapshot(vname)
+    #print '---------------------------- get parent snapshot %s ----------------------------------' % agent.get_parent_snapshot(vname, 'snap1')
+    #print '---------------------------- start create snapshot snap2 ----------------------------------'
+    #agent.create_snapshot(vname, 'snap2')
+    #print '---------------------------- stop create snapshot snap2 ----------------------------------'
+    #print '---------------------------- get current snapshot %s ----------------------------------' % agent.get_current_snapshot(vname)
+    #print '---------------------------- get parent snapshot %s ----------------------------------' % agent.get_parent_snapshot(vname, 'snap2')
+    agent.delete_snapshot(vname, 'snap1')
+    agent.delete_snapshot(vname, 'snap2')

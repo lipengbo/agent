@@ -40,6 +40,10 @@ def myDomainEventCallback1(conn, dom, event, detail, opaque):
     #print "myDomainEventCallback1 EVENT: Domain: %s Event: %s Detail: %s" % (dom.name(), eventToString(event), detailToString(event, detail))
     if event == 5:
         ComputeManager._set_domain_state(dom.name(), state=event)
+    if event == 3:
+        ComputeManager._set_domain_state(dom.name(), state=event)
+    if event == 2 and detailToString(event, detail) == "Snapshot":
+        ComputeManager._set_domain_state(dom.name(), state=1)
 
 
 def virEventLoopNativeRun():

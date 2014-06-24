@@ -16,7 +16,7 @@ from virt import utils
 from virt.disk import api as disk_api
 from virt.vif import LibvirtOpenVswitchDriver
 from virt.ipam import netaddr
-#import exception
+# import exception
 from common import log as logging
 from etc import constants
 from db.models import Domain
@@ -62,7 +62,8 @@ class LibvirtConnection(object):
         return libvirt.openAuth(uri, auth, 0)
 
     def list_instances(self):
-        instances = [self._conn.lookupByID(x).name() for x in self._conn.listDomainsID()]
+        instances = [self._conn.lookupByID(x).name()
+                     for x in self._conn.listDomainsID()]
         instances.extend([x for x in self._conn.listDefinedDomains()])
         return instances
 
@@ -114,9 +115,10 @@ class LibvirtConnection(object):
             doc = etree.fromstring(xml)
             path = './devices/graphics'
             ret = doc.findall(path)
-            target.extend([node.get('port') for node in ret if node.get('port') != -1])
-            #for node in ret:
-                #target.append(node.get('port'))
+            target.extend([node.get('port')
+                          for node in ret if node.get('port') != -1])
+            # for node in ret:
+                # target.append(node.get('port'))
         except:
             pass
         return target and target[0]
@@ -130,7 +132,8 @@ class LibvirtConnection(object):
             path = './devices/disk'
             ret = doc.findall(path)
             for node in ret:
-                target.extend([child.get('file') for child in node.getchildren() if child.tag == 'source'])
+                target.extend([child.get('file')
+                              for child in node.getchildren() if child.tag == 'source'])
         except:
             pass
         return target[0]
@@ -144,19 +147,21 @@ class LibvirtConnection(object):
             path = './devices/interface'
             ret = doc.findall(path)
             for node in ret:
-                target.extend([child.get('dev') for child in node.getchildren() if child.tag == 'target'])
+                target.extend([child.get('dev')
+                              for child in node.getchildren() if child.tag == 'target'])
         except:
             pass
         return target
 
     def do_action(self, vname, action, ofport_request=None):
         dom = self.get_instance(vname)
-        #op_supported = ('create', 'suspend', 'undefine', 'resume', 'destroy')
+        # op_supported = ('create', 'suspend', 'undefine', 'resume', 'destroy')
         state = None
         if action == 'create':
             if ofport_request:
                 portname = 'vdata-%s' % vname[0:8]
-                LibvirtOpenVswitchDriver.set_vm_ofport(portname, ofport_request)
+                LibvirtOpenVswitchDriver.set_vm_ofport(
+                    portname, ofport_request)
             state = 2
         if action == 'destroy':
             LibvirtOpenVswitchDriver.del_vm_port(vname)
@@ -227,11 +232,14 @@ class LibvirtConnection(object):
         network = netaddr.Network(network_addr)
         ip_start = str(network.get_host(1))
         netsize = network.size
-        dhcp_conf_content = LibvirtConnection.prepare_dhcp_conf(ip_start=ip_start, netsize=netsize, gateway=gateway)
+        dhcp_conf_content = LibvirtConnection.prepare_dhcp_conf(
+            ip_start=ip_start, netsize=netsize, gateway=gateway)
         mac_ip_list = []
         for host_ip in network.iter_hosts():
-            mac_ip_list.append((netaddr.generate_mac_address(host_ip), host_ip))
-        dhcp_hostfile_content = LibvirtConnection.prepare_dhcp_hostfile(mac_ip_list=mac_ip_list)
+            mac_ip_list.append((
+                netaddr.generate_mac_address(host_ip), host_ip))
+        dhcp_hostfile_content = LibvirtConnection.prepare_dhcp_hostfile(
+            mac_ip_list=mac_ip_list)
         return ((config.dhcp_conf_target, dhcp_conf_content), (config.dhcp_hostfile_target, dhcp_hostfile_content))
 
     @staticmethod
@@ -253,35 +261,36 @@ class LibvirtConnection(object):
                 'type': 0 for controller; 1 for vm; 2 for gateway
             }
         """
-        #step 0: data prepare
+        # step 0: data prepare
         image_url = vmInfo.pop('glanceURL')
         image_uuid = vmInfo.pop('img')
         disk_size = vmInfo.pop('hdd')
         vm_type = vmInfo.pop('type')
-        #step 1: fetch image from glance
+        # step 1: fetch image from glance
         try:
             target_image = config.image_path + image_uuid
             images.fetch(image_url, target_image)
-            #if err:
-                #raise exception.DownloadImageException(image_uuid=image_uuid)
+            # if err:
+                # raise exception.DownloadImageException(image_uuid=image_uuid)
         except:
             if os.path.exists(target_image):
                 os.remove(target_image)
             raise
-        #step 2: create image for vm
+        # step 2: create image for vm
         try:
             vm_home = config.image_path + vmInfo['name']
             utils.execute('mkdir', '-p', vm_home)
             vm_image = vm_home + '/disk'
             images.create_cow_image(target_image, vm_image, disk_size)
-            #if err:
-                #raise exception.CreateImageException(instance_id=vmInfo['name'])
+            # if err:
+                # raise
+                # exception.CreateImageException(instance_id=vmInfo['name'])
         except:
             if os.path.exists(vm_home):
                 shutil.rmtree(vm_home)
             raise
-        #step 3: inject data into vm
-        #ovs_driver = LibvirtOpenVswitchDriver()
+        # step 3: inject data into vm
+        # ovs_driver = LibvirtOpenVswitchDriver()
         try:
             nics = []
             interfaces = []
@@ -290,7 +299,8 @@ class LibvirtConnection(object):
             for net in network:
                 address = net.get('address', '0.0.0.0/0')
                 nic = {}
-                nic['mac_address'] = netaddr.generate_mac_address(netaddr.clean_ip(address))
+                nic['mac_address'] = netaddr.generate_mac_address(
+                    netaddr.clean_ip(address))
                 if net_dev_index == 1:
                     nic['bridge_name'] = config.gw_br
                     nic['dev'] = 'vgate-%s' % vmInfo['name'][0:8]
@@ -300,7 +310,8 @@ class LibvirtConnection(object):
                 else:
                     nic['bridge_name'] = config.control_br
                     nic['dev'] = 'vcontr-%s' % vmInfo['name'][0:8]
-                    #nic['bridge_name'] = ovs_driver.get_dev_name(vmInfo['name'])[0]
+                    # nic['bridge_name'] =
+                    # ovs_driver.get_dev_name(vmInfo['name'])[0]
                 nics.append(nic)
                 netaddr_network = netaddr.Network(address)
                 ifc = {}
@@ -308,7 +319,8 @@ class LibvirtConnection(object):
                 ifc['address'] = netaddr.clean_ip(address)
                 ifc['netmask'] = str(netaddr_network.netmask)
                 ifc['broadcast'] = str(netaddr_network.broadcast)
-                ifc['gateway'] = net.get('gateway', netaddr_network.get_first_host())
+                ifc['gateway'] = net.get(
+                    'gateway', netaddr_network.get_first_host())
                 ifc['dns'] = vmInfo.pop('dns', '8.8.8.8')
                 ifc['vm_type'] = vm_type
                 interfaces.append(ifc)
@@ -322,20 +334,21 @@ class LibvirtConnection(object):
                 files = LibvirtConnection.prepare_dhcp_files(network[0])
             if vm_type != VM_TYPE['slice_vm']:
                 netXml = LibvirtConnection.prepare_interface_xml(interfaces)
-            disk_api.inject_data(vm_image, net=netXml, key=key, files=files, partition=1)
+            disk_api.inject_data(
+                vm_image, net=netXml, key=key, files=files, partition=1)
         except:
             if os.path.exists(vm_home):
                 shutil.rmtree(vm_home)
             raise
-        #step 4: prepare link for binding to ovs
-        #try:
-            #ovs_driver.plug(vmInfo['name'], vm_type)
-        #except:
-            #if os.path.exists(vm_home):
-                #shutil.rmtree(vm_home)
-            #ovs_driver.unplug(vmInfo['name'])
-            #raise
-        #step 5: define vm
+        # step 4: prepare link for binding to ovs
+        # try:
+            # ovs_driver.plug(vmInfo['name'], vm_type)
+        # except:
+            # if os.path.exists(vm_home):
+                # shutil.rmtree(vm_home)
+            # ovs_driver.unplug(vmInfo['name'])
+            # raise
+        # step 5: define vm
         try:
             domainXml = LibvirtConnection.prepare_libvirt_xml(vmInfo)
             conn = LibvirtConnection._connect()
@@ -343,9 +356,14 @@ class LibvirtConnection(object):
         except:
             if os.path.exists(vm_home):
                 shutil.rmtree(vm_home)
-            #ovs_driver.unplug(vmInfo['name'])
+            # ovs_driver.unplug(vmInfo['name'])
             raise
-        #step 6: insert vm recorder into db
+        finally:
+            try:
+                conn.close()
+            except:
+                pass
+        # step 6: insert vm recorder into db
         try:
             domain = Domain()
             domain.name = vmInfo['name']
@@ -353,26 +371,80 @@ class LibvirtConnection(object):
             domain.save()
         except:
             pass
+
+    def delete_vm(self, vname):
+        # step 0: stop vm
+        if self.get_state(vname) != 5:
+            self.do_action(vname, 'destroy')
+        # step 1: undefine vm
+        self.do_action(vname, 'undefine')
+        # step 2: delete virtual interface
+        LibvirtOpenVswitchDriver.del_vm_port(vname)
+        # step 3: clean vm image, delete vm_home
+        vm_home = config.image_path + vname
+        if os.path.exists(vm_home):
+            shutil.rmtree(vm_home)
+        # step 4: delete vm in db
+        try:
+            Domain.delete(vname)
+        except:
+            pass
+
+    @staticmethod
+    def create_snapshot(vname, snapshot_name, snapshot_desc):
+        try:
+            snapshot_xml = """<domainsnapshot>
+            <name>%s</name>
+            <description>%s</description>
+            <disks><disk name='vda' snapshot='internal'/></disks>
+            <domain type='qemu' xmlns:qemu='http://libvirt.org/schemas/domain/qemu/1.0'>
+            <name>%s</name>
+            <uuid>%s</uuid>
+            </domain>
+            </domainsnapshot>\n"""  % (snapshot_name, snapshot_desc, vname, vname)
+            conn = LibvirtConnection._connect()
+            dom = conn.lookupByName(vname)
+            dom.snapshotCreateXML(snapshot_xml, 0)
+            dom_snap = dom.snapshotLookupByName(snapshot_name, 0)
+            dom.revertToSnapshot(dom_snap, libvirt.VIR_DOMAIN_SNAPSHOT_REVERT_FORCE)
+        except Exception as e:
+            LOG.error(e)
         finally:
             try:
                 conn.close()
             except:
                 pass
 
-    def delete_vm(self, vname):
-        #step 0: stop vm
-        if self.get_state(vname) != 5:
-            self.do_action(vname, 'destroy')
-        #step 1: undefine vm
-        self.do_action(vname, 'undefine')
-        #step 2: delete virtual interface
-        LibvirtOpenVswitchDriver.del_vm_port(vname)
-        #step 3: clean vm image, delete vm_home
-        vm_home = config.image_path + vname
-        if os.path.exists(vm_home):
-            shutil.rmtree(vm_home)
-        #step 4: delete vm in db
+    @staticmethod
+    def delete_snapshot(vname, snapshot_name):
         try:
-            Domain.delete(vname)
-        except:
-            pass
+            conn = LibvirtConnection._connect()
+            dom = conn.lookupByName(vname)
+            dom_snap = dom.snapshotLookupByName(snapshot_name, 0)
+            dom_snap.delete(0)
+        except Exception as e:
+            LOG.error(e)
+        finally:
+            try:
+                conn.close()
+            except:
+                pass
+
+    def get_current_snapshot(self, vname):
+        try:
+            dom = self.get_instance(vname)
+            snapshot_name = dom.snapshotCurrent(0).getName()
+        except Exception as e:
+            LOG.error(e)
+            snapshot_name = None
+        return snapshot_name
+
+    def get_parent_snapshot(self, vname, snapshot_name):
+        try:
+            dom = self.get_instance(vname)
+            dom_snap = dom.snapshotLookupByName(snapshot_name, 0)
+            snapshot_name = dom_snap.getParent(0).getName()
+        except Exception as e:
+            LOG.error(e)
+            snapshot_name = None
+        return snapshot_name

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Filename:xmlrpcclient.py
-# Date:Fri Oct 25 11:16:35 CST 2013
+# Filename:client.py
+# Date:Fri Jul 05 17:38:12 CST 2013
 # Author:Pengbo Li
 # E-mail:lipengbo10054444@gmail.com
 import xmlrpclib
@@ -10,7 +10,6 @@ from etc import config
 
 
 class TimeoutTransport(xmlrpclib.Transport):
-    timeout = config.rpc_connection_timeout
 
     def set_timeout(self, timeout):
         self.timeout = timeout
@@ -20,7 +19,10 @@ class TimeoutTransport(xmlrpclib.Transport):
         return h
 
 
-def get_rpc_client(ip, port):
+def get_rpc_client(ip, port, timeout=None):
     t = TimeoutTransport()
-    t.set_timeout(config.rpc_connection_timeout)
+    if timeout:
+        t.set_timeout(timeout)
+    else:
+        t.set_timeout(config.rpc_connection_timeout)
     return xmlrpclib.ServerProxy("http://%s:%s/" % (ip, port), allow_none=True, transport=t)

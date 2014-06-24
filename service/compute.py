@@ -103,6 +103,14 @@ class ComputeManager(object):
         except:
             return False
 
+    @staticmethod
+    def create_snapshot(vname, snapshot_name, snapshot_desc):
+        LibvirtConnection.create_snapshot(vname, snapshot_name, snapshot_desc)
+
+    @staticmethod
+    def delete_snapshot(vname, snapshot_name):
+        LibvirtConnection.delete_snapshot(vname, snapshot_name)
+
 
 from twisted.web import xmlrpc
 
@@ -179,3 +187,26 @@ class ComputeService(xmlrpc.XMLRPC):
         t = threading.Thread(target=delete_sshkeys, args=(vname, key))
         t.start()
         return True
+
+    def xmlrpc_create_snapshot(self, vname, snapshot_name):
+        snapshot_desc = "%s %s" % (vname, snapshot_name)
+        create_snapshot = ComputeManager.create_snapshot
+        t = threading.Thread(target=create_snapshot, args=(vname, snapshot_name, snapshot_desc))
+        t.start()
+        return True
+
+    def xmlrpc_delete_snapshot(self, vname, snapshot_name):
+        delete_snapshot = ComputeManager.delete_snapshot
+        t = threading.Thread(target=delete_snapshot, args=(vname, snapshot_name))
+        t.start()
+        return True
+
+    def xmlrpc_get_current_snapshot(self, vname):
+        conn = LibvirtConnection()
+        current_snapshot = conn.get_current_snapshot(vname)
+        return current_snapshot
+
+    def xmlrpc_get_parent_snapshot(self, vname, snapshot_name):
+        conn = LibvirtConnection()
+        parent_snapshot = conn.get_parent_snapshot(vname, snapshot_name)
+        return parent_snapshot

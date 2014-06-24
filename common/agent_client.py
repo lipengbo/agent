@@ -12,27 +12,27 @@ class AgentClient(object):
     def __init__(self, ip):
         self.ip = ip
 
-    def do_domain_action(self, vname, action, ofport=None):
-        client = get_rpc_client(self.ip, config.compute_service_port)
+    def do_domain_action(self, vname, action, ofport=None, timeout=None):
+        client = get_rpc_client(self.ip, config.compute_service_port, timeout)
         return client.do_domain_action(vname, action, ofport)
 
-    def get_domain_state(self, vname):
-        client = get_rpc_client(self.ip, config.compute_service_port)
+    def get_domain_state(self, vname, timeout=None):
+        client = get_rpc_client(self.ip, config.compute_service_port, timeout)
         return client.get_domain_state(vname)
 
-    def get_vnc_port(self, vname):
-        client = get_rpc_client(self.ip, config.compute_service_port)
+    def get_vnc_port(self, vname, timeout=None):
+        client = get_rpc_client(self.ip, config.compute_service_port, timeout)
         return client.get_vnc_port(vname)
 
-    def add_route_to_vpnserver(self, net, gw):
-        client = get_rpc_client(self.ip, config.vpn_service_port)
+    def add_route_to_vpnserver(self, net, gw, timeout=None):
+        client = get_rpc_client(self.ip, config.vpn_service_port, timeout)
         return client.add_route(net, gw)
 
-    def del_route_from_vpnserver(self, net, gw):
-        client = get_rpc_client(self.ip, config.vpn_service_port)
+    def del_route_from_vpnserver(self, net, gw, timeout=None):
+        client = get_rpc_client(self.ip, config.vpn_service_port, timeout)
         return client.del_route(net, gw)
 
-    def create_vm(self, vmInfo, key=None):
+    def create_vm(self, vmInfo, key=None, timeout=None):
         """
         vmInfo:
             {
@@ -49,33 +49,49 @@ class AgentClient(object):
                 'type': 0 for controller; 1 for vm; 2 for gateway
             }
         """
-        client = get_rpc_client(self.ip, config.compute_service_port)
+        client = get_rpc_client(self.ip, config.compute_service_port, timeout)
         return client.create_vm(vmInfo, key)
 
-    def delete_vm(self, vname):
-        client = get_rpc_client(self.ip, config.compute_service_port)
+    def delete_vm(self, vname, timeout=None):
+        client = get_rpc_client(self.ip, config.compute_service_port, timeout)
         return client.delete_vm(vname)
 
-    def get_instances_count(self):
-        client = get_rpc_client(self.ip, config.compute_service_port)
+    def get_instances_count(self, timeout=None):
+        client = get_rpc_client(self.ip, config.compute_service_port, timeout)
         return client.instances_count()
 
-    def get_host_info(self):
-        client = get_rpc_client(self.ip, config.monitor_service_port)
+    def get_host_info(self, timeout=None):
+        client = get_rpc_client(self.ip, config.monitor_service_port, timeout)
         return client.get_host_info()
 
-    def get_host_status(self):
-        client = get_rpc_client(self.ip, config.monitor_service_port)
+    def get_host_status(self, timeout=None):
+        client = get_rpc_client(self.ip, config.monitor_service_port, timeout)
         return client.get_host_status()
 
-    def get_domain_status(self, vname):
-        client = get_rpc_client(self.ip, config.monitor_service_port)
+    def get_domain_status(self, vname, timeout=None):
+        client = get_rpc_client(self.ip, config.monitor_service_port, timeout)
         return client.get_domain_status(vname)
 
-    def add_sshkeys(self, vname, key=None):
-        client = get_rpc_client(self.ip, config.compute_service_port)
+    def add_sshkeys(self, vname, key=None, timeout=None):
+        client = get_rpc_client(self.ip, config.compute_service_port, timeout)
         return client.add_sshkeys(vname, key)
 
-    def delete_sshkeys(self, vname, key=None):
-        client = get_rpc_client(self.ip, config.compute_service_port)
+    def delete_sshkeys(self, vname, key=None, timeout=None):
+        client = get_rpc_client(self.ip, config.compute_service_port, timeout)
         return client.delete_sshkeys(vname, key)
+
+    def create_snapshot(self, vname, snapshot_name, timeout=None):
+        client = get_rpc_client(self.ip, config.compute_service_port, timeout)
+        return client.create_snapshot(vname, snapshot_name)
+
+    def delete_snapshot(self, vname, snapshot_name, timeout=None):
+        client = get_rpc_client(self.ip, config.compute_service_port, timeout)
+        return client.delete_snapshot(vname, snapshot_name)
+
+    def get_current_snapshot(self, vname, timeout=None):
+        client = get_rpc_client(self.ip, config.compute_service_port, timeout)
+        return client.get_current_snapshot(vname)
+
+    def get_parent_snapshot(self, vname, snapshot_name, timeout=None):
+        client = get_rpc_client(self.ip, config.compute_service_port, timeout)
+        return client.get_parent_snapshot(vname, snapshot_name)
