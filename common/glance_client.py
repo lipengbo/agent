@@ -268,6 +268,14 @@ EXAMPLES
     image_meta['properties'] = fields
 
     if not options.dry_run:
+        print '-------------------------------------------------------------------'
+        print "options=%s" % options
+        print "args=%s" % args
+        print "fields=%s" % fields
+        print "image_meta=%s" % image_meta
+        print "location=%s" % location
+        print "features=%s" % features
+        print '-------------------------------------------------------------------'
         try:
             image_meta = c.add_image(image_meta, image_data,
                                      features=features)
@@ -650,6 +658,9 @@ def get_client(options):
     specified by the --host and --port options
     supplied to the CLI
     """
+    print '---------------- start get_client ---------------------'
+    print options
+    print '---------------- stop get_client ---------------------'
     return glance_client.get_client(host=options.host,
                                     port=options.port,
                                     timeout=options.timeout,
