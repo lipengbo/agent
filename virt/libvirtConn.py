@@ -416,6 +416,21 @@ class LibvirtConnection(object):
                 pass
 
     @staticmethod
+    def revert_to_snapshot(vname, snapshot_name):
+        try:
+            conn = LibvirtConnection._connect()
+            dom = conn.lookupByName(vname)
+            dom_snap = dom.snapshotLookupByName(snapshot_name, 0)
+            dom.revertToSnapshot(dom_snap, libvirt.VIR_DOMAIN_SNAPSHOT_REVERT_FORCE)
+        except Exception as e:
+            LOG.error(e)
+        finally:
+            try:
+                conn.close()
+            except:
+                pass
+
+    @staticmethod
     def delete_snapshot(vname, snapshot_name):
         try:
             conn = LibvirtConnection._connect()

@@ -108,6 +108,10 @@ class ComputeManager(object):
         LibvirtConnection.create_snapshot(vname, snapshot_name, snapshot_desc)
 
     @staticmethod
+    def revert_to_snapshot(vname, snapshot_name):
+        LibvirtConnection.revert_to_snapshot(vname, snapshot_name)
+
+    @staticmethod
     def delete_snapshot(vname, snapshot_name):
         LibvirtConnection.delete_snapshot(vname, snapshot_name)
 
@@ -192,6 +196,12 @@ class ComputeService(xmlrpc.XMLRPC):
         snapshot_desc = "%s %s" % (vname, snapshot_name)
         create_snapshot = ComputeManager.create_snapshot
         t = threading.Thread(target=create_snapshot, args=(vname, snapshot_name, snapshot_desc))
+        t.start()
+        return True
+
+    def xmlrpc_revert_to_snapshot(self, vname, snapshot_name):
+        revert_to_snapshot = ComputeManager.revert_to_snapshot
+        t = threading.Thread(target=revert_to_snapshot, args=(vname, snapshot_name))
         t.start()
         return True
 

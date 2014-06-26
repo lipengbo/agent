@@ -84,6 +84,10 @@ class AgentClient(object):
         client = get_rpc_client(self.ip, config.compute_service_port, timeout)
         return client.create_snapshot(vname, snapshot_name)
 
+    def revert_to_snapshot(self, vname, snapshot_name, timeout=None):
+        client = get_rpc_client(self.ip, config.compute_service_port, timeout)
+        return client.revert_to_snapshot(vname, snapshot_name)
+
     def delete_snapshot(self, vname, snapshot_name, timeout=None):
         client = get_rpc_client(self.ip, config.compute_service_port, timeout)
         return client.delete_snapshot(vname, snapshot_name)

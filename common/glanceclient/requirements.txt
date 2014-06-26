@@ -1,0 +1,1 @@
+sudo apt-get install python-json-patch python-json-pointer python-jsonschema python-keystoneclient python-mock python-netaddr python-oslo.config python-pbr python-prettytable python-requests python-simplejson python-urllib3
