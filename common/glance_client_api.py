@@ -1,21 +1,9 @@
-# Copyright 2012 United States Government as represented by the
-# Administrator of the National Aeronautics and Space Administration.
-# All Rights Reserved.
-#
-# Copyright 2012 Nebula, Inc.
-#
-#    Licensed under the Apache License, Version 2.0 (the "License"); you may
-#    not use this file except in compliance with the License. You may obtain
-#    a copy of the License at
-#
-#         http://www.apache.org/licenses/LICENSE-2.0
-#
-#    Unless required by applicable law or agreed to in writing, software
-#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-#    License for the specific language governing permissions and limitations
-#    under the License.
-
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# Filename:glance_client_api.py
+# Date:四  6月 26 11:08:20 CST 2014
+# Author:Pengbo Li
+# E-mail:lipengbo10054444@gmail.com
 from __future__ import absolute_import
 
 import itertools
@@ -74,7 +62,7 @@ def image_update(url, image_id, **kwargs):
 
 
 def image_create(url, **kwargs):
-    copy_from = kwargs.pop('copy_from', None)
+    location = kwargs.pop('location', None)
     data = kwargs.pop('data', None)
 
     image = glanceclient(url).images.create(**kwargs)
@@ -84,9 +72,9 @@ def image_create(url, **kwargs):
                                 (url, image.id),
                                 {'data': data,
                                  'purge_props': False})
-    elif copy_from:
+    elif location:
         thread.start_new_thread(image_update,
                                 (url, image.id),
-                                {'copy_from': copy_from,
+                                {'location': location,
                                  'purge_props': False})
     return image
