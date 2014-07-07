@@ -144,7 +144,7 @@ def test_get_portid_by_name():
 
 def test():
     agent = AgentClient('127.0.0.1')
-    vname = 'test_snapshot'
+    vname = 'vname'
     #print '---------------------------- start create snapshot snap1 ----------------------------------'
     #agent.create_snapshot(vname, 'snap1')
     #print '---------------------------- stop create snapshot snap1 ----------------------------------'
@@ -155,5 +155,9 @@ def test():
     #print '---------------------------- stop create snapshot snap2 ----------------------------------'
     #print '---------------------------- get current snapshot %s ----------------------------------' % agent.get_current_snapshot(vname)
     #print '---------------------------- get parent snapshot %s ----------------------------------' % agent.get_parent_snapshot(vname, 'snap2')
-    agent.delete_snapshot(vname, 'snap1')
-    agent.delete_snapshot(vname, 'snap2')
+    #agent.delete_snapshot(vname, 'snap1')
+    #agent.delete_snapshot(vname, 'snap2')
+    snapshot_name = 'snap1'
+    url = "http://192.168.5.111:9292"
+    image_meta = {'name': 'vname', 'is_public': True, 'container_format': 'ovf', 'disk_format': 'qcow2'}
+    agent.create_image_from_vm(vname, url, image_meta)
