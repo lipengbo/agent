@@ -16,6 +16,10 @@
 
 #NOTE(bcwaldon): this try/except block is needed to run setup.py due to
 # its need to import local code before installing required dependencies
+import os
+import sys
+plugins_path = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir))
+sys.path.insert(0, plugins_path)
 try:
     import glanceclient.client
     Client = glanceclient.client.Client

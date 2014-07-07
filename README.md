@@ -10,6 +10,7 @@ getting started
 
 ### 安装
 ##### 依赖库
+    apt-get install libffi-dev
     pip install -r requirements.txt
     所有服务均可配置，详细说明请查看配置文件
 ##### 执行安装脚本

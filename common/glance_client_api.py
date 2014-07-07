@@ -9,7 +9,7 @@ from __future__ import absolute_import
 import itertools
 import thread
 
-import glanceclient as glance_client
+import common.glanceclient as glance_client
 
 
 def glanceclient(url):
