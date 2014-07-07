@@ -99,3 +99,11 @@ class AgentClient(object):
     def get_parent_snapshot(self, vname, snapshot_name, timeout=None):
         client = get_rpc_client(self.ip, config.compute_service_port, timeout)
         return client.get_parent_snapshot(vname, snapshot_name)
+
+    def create_image_from_snapshot(self, vname, snapshot_name, url, image_meta, timeout=None):
+        client = get_rpc_client(self.ip, config.compute_service_port, timeout)
+        return client.create_image_from_snapshot(vname, snapshot_name, url, image_meta)
+
+    def create_image_from_vm(self, vname, url, image_meta, timeout=None):
+        client = get_rpc_client(self.ip, config.compute_service_port, timeout)
+        return client.create_image_from_vm(vname, url, image_meta)

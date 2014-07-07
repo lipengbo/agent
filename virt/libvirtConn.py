@@ -16,7 +16,9 @@ from virt import utils
 from virt.disk import api as disk_api
 from virt.vif import LibvirtOpenVswitchDriver
 from virt.ipam import netaddr
+from common import glance_client_api
 # import exception
+import time
 from common import log as logging
 from etc import constants
 from db.models import Domain
@@ -444,6 +446,34 @@ class LibvirtConnection(object):
                 conn.close()
             except:
                 pass
+
+    @staticmethod
+    def create_image_from_snapshot(vname, snapshot_name, url, image_meta):
+        image_path = config.image_path + vname + '/disk'
+        dest_image = config.image_path + vname + "_" + snapshot_name
+        try:
+            utils.execute('qemu-image', '-f', 'qcow2', '-O', 'qcow2', '-s', snapshot_name, image_path, dest_image)
+            image_meta['data'] = open(dest_image)
+            glance_client_api.image_create(url, **image_meta)
+        except Exception as e:
+            LOG.error(e)
+        finally:
+            if os.path.exists(dest_image):
+                shutil.rmtree(dest_image)
+
+    @staticmethod
+    def create_image_from_vm(vname, url, image_meta):
+        image_path = config.image_path + vname + '/disk'
+        dest_image = config.image_path + vname + "_" + str(time.time())
+        try:
+            utils.execute('qemu-image', '-f', 'qcow2', '-O', 'qcow2', image_path, dest_image)
+            image_meta['data'] = open(dest_image)
+            glance_client_api.image_create(url, **image_meta)
+        except Exception as e:
+            LOG.error(e)
+        finally:
+            if os.path.exists(dest_image):
+                shutil.rmtree(dest_image)
 
     def get_current_snapshot(self, vname):
         try:

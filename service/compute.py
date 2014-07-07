@@ -115,6 +115,14 @@ class ComputeManager(object):
     def delete_snapshot(vname, snapshot_name):
         LibvirtConnection.delete_snapshot(vname, snapshot_name)
 
+    @staticmethod
+    def create_image_from_snapshot(vname, snapshot_name, url, image_meta):
+        LibvirtConnection.create_image_from_snapshot(vname, snapshot_name, url, image_meta)
+
+    @staticmethod
+    def create_image_from_vm(vname, url, image_meta):
+        LibvirtConnection.create_image_from_vm(vname, url, image_meta)
+
 
 from twisted.web import xmlrpc
 
@@ -220,3 +228,15 @@ class ComputeService(xmlrpc.XMLRPC):
         conn = LibvirtConnection()
         parent_snapshot = conn.get_parent_snapshot(vname, snapshot_name)
         return parent_snapshot
+
+    def xmlrpc_create_image_from_snapshot(self, vname, snapshot_name, url, image_meta):
+        create_image_from_snapshot = ComputeManager.create_image_from_snapshot
+        t = threading.Thread(target=create_image_from_snapshot, args=(vname, snapshot_name, url, image_meta))
+        t.start()
+        return True
+
+    def xmlrpc_create_image_from_vm(self, vname, url, image_meta):
+        create_image_from_vm = ComputeManager.create_image_from_vm
+        t = threading.Thread(target=create_image_from_vm, args=(vname, url, image_meta))
+        t.start()
+        return True
