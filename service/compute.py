@@ -12,6 +12,7 @@ from virt.disk.api import inject_data
 from common.ccf_client import CCFClient
 from etc import config
 from etc import constants
+from virt.images import fetch_with_wget
 from common import log as logging
 #from db.models import create_instance
 LOG = logging.getLogger("agent")
@@ -238,5 +239,21 @@ class ComputeService(xmlrpc.XMLRPC):
     def xmlrpc_create_image_from_vm(self, vname, url, image_meta):
         create_image_from_vm = ComputeManager.create_image_from_vm
         t = threading.Thread(target=create_image_from_vm, args=(vname, url, image_meta))
+        t.start()
+        return True
+
+    def xmlrpc_reset_dom_mem_vcpu(self, vname, mem_size=None, vcpu=None):
+        conn = LibvirtConnection()
+        result1 = True
+        result2 = True
+        if mem_size:
+            result1 = conn.set_dom_mem(vname, mem_size)
+        if vcpu:
+            result2 = conn.set_dom_vcpu(vname, vcpu)
+        return result1 & result2
+
+    def xmlrpc_download_image(self, url, image_uuid):
+        target = config.image_path + image_uuid
+        t = threading.Thread(target=fetch_with_wget, args=(url, target))
         t.start()
         return True

@@ -107,3 +107,11 @@ class AgentClient(object):
     def create_image_from_vm(self, vname, url, image_meta, timeout=None):
         client = get_rpc_client(self.ip, config.compute_service_port, timeout)
         return client.create_image_from_vm(vname, url, image_meta)
+
+    def reset_dom_mem_vcpu(self, vname, mem_size=None, vcpu=None, timeout=None):
+        client = get_rpc_client(self.ip, config.compute_service_port, timeout)
+        return client.reset_dom_mem_vcpu(vname, mem_size, vcpu)
+
+    def download_image(self, url, image_uuid, timeout=None):
+        client = get_rpc_client(self.ip, config.compute_service_port, timeout)
+        return client.download_image(url, image_uuid)

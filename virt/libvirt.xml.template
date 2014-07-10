@@ -1,7 +1,7 @@
 <domain type='qemu' xmlns:qemu='http://libvirt.org/schemas/domain/qemu/1.0'>
     <uuid>${name}</uuid>
     <name>${name}</name>
-    <memory>${mem}</memory>
+    <memory unit='KiB'>${mem}</memory>
     <vcpu>${cpus}</vcpu>
     <os>
         <type>hvm</type>

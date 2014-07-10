@@ -493,3 +493,26 @@ class LibvirtConnection(object):
             LOG.error(e)
             snapshot_name = None
         return snapshot_name
+
+    def set_dom_mem(self, vname, mem_size):
+        result = True
+        try:
+            mem_size_kb = mem_size << 10
+            dom = self.get_instance(vname)
+            dom.setMemoryFlags(mem_size_kb, libvirt.VIR_DOMAIN_MEM_MAXIMUM)
+            dom.setMemoryFlags(mem_size_kb, libvirt.VIR_DOMAIN_AFFECT_CURRENT)
+        except Exception as e:
+            LOG.error(e)
+            result = False
+        return result
+
+    def set_dom_vcpu(self, vname, vcpu):
+        result = True
+        try:
+            dom = self.get_instance(vname)
+            dom.setVcpusFlags(vcpu, libvirt.VIR_DOMAIN_VCPU_MAXIMUM)
+            dom.setVcpusFlags(vcpu, libvirt.VIR_DOMAIN_AFFECT_CURRENT)
+        except Exception as e:
+            LOG.error(e)
+            result = False
+        return result
