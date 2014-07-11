@@ -7,7 +7,7 @@
 from __future__ import absolute_import
 
 import itertools
-import thread
+#import thread
 
 from common import glanceclient as glance_client
 
@@ -68,13 +68,7 @@ def image_create(url, **kwargs):
     image = glanceclient(url).images.create(**kwargs)
 
     if data:
-        thread.start_new_thread(image_update,
-                                (url, image.id),
-                                {'data': data,
-                                 'purge_props': False})
+        image_update(url, image.id, {'data': data, 'purge_props': False})
     elif location:
-        thread.start_new_thread(image_update,
-                                (url, image.id),
-                                {'location': location,
-                                 'purge_props': False})
+        image_update(url, image.id, {'location': location, 'purge_props': False})
     return image

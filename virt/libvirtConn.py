@@ -455,7 +455,11 @@ class LibvirtConnection(object):
         try:
             utils.execute('qemu-img', 'convert', '-f', 'qcow2', '-O', 'qcow2', '-s', snapshot_name, image_path, dest_image)
             image_meta['data'] = open(dest_image)
-            glance_client_api.image_create(url, **image_meta)
+            image = glance_client_api.image_create(url, **image_meta)
+            image_abs_path_qcow2 = config.image_path + '/' + image.id + '.qcow2'
+            image_abs_path_raw = config.image_path + '/' + image.id
+            utils.execute('mv', dest_image, image_abs_path_qcow2)
+            utils.execute('qemu-img', 'convert', '-f', 'qcow2', '-O', 'raw', image_abs_path_qcow2, image_abs_path_raw)
         except Exception as e:
             LOG.error(e)
         finally:
@@ -469,7 +473,11 @@ class LibvirtConnection(object):
         try:
             utils.execute('qemu-img', 'convert', '-f', 'qcow2', '-O', 'qcow2', image_path, dest_image)
             image_meta['data'] = open(dest_image)
-            glance_client_api.image_create(url, **image_meta)
+            image = glance_client_api.image_create(url, **image_meta)
+            image_abs_path_qcow2 = config.image_path + '/' + image.id + '.qcow2'
+            image_abs_path_raw = config.image_path + '/' + image.id
+            utils.execute('mv', dest_image, image_abs_path_qcow2)
+            utils.execute('qemu-img', 'convert', '-f', 'qcow2', '-O', 'raw', image_abs_path_qcow2, image_abs_path_raw)
         except Exception as e:
             LOG.error(e)
         finally:
