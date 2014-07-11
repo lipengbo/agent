@@ -424,6 +424,7 @@ class LibvirtConnection(object):
             dom = conn.lookupByName(vname)
             dom_snap = dom.snapshotLookupByName(snapshot_name, 0)
             dom.revertToSnapshot(dom_snap, libvirt.VIR_DOMAIN_SNAPSHOT_REVERT_FORCE)
+            dom.destroy()
         except Exception as e:
             LOG.error(e)
         finally:
