@@ -10,6 +10,8 @@ Handling of VM disk images.
 import os
 import re
 from common import log as logging
+from common.ccf_client import CCFClient
+from etc.config import control_br
 from virt import utils
 import urllib2
 import threading
@@ -190,12 +192,19 @@ def fetch_with_urllib2(url, target):
             fp.write(content)
 
 
-def fetch_with_wget(url, target):
+def fetch_with_wget(url, target, callback=False):
     cmd = ('wget', '-c', '--timeout=3', '-t', '5', url, '-O', target + '.qcow2')
+    result = -1
     utils.execute(*cmd)
     if not os.path.exists(target):
         cmd = ('qemu-img', 'convert', target + '.qcow2', target)
         utils.execute(*cmd)
+    if callback:
+        server_ip = utils.get_ip_address(control_br)
+        image_id = target.split('/')[-1]
+        result = 1
+        ccfclient = CCFClient()
+        ccfclient.update_distribute_state(server_ip, image_id, result)
 
 
 def fetch(url, target, method=fetch_with_wget):

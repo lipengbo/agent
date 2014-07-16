@@ -31,3 +31,7 @@ class CCFClient(object):
     def set_domain_state(self, vname, state):
         client = get_rpc_client()
         return client.set_domain_state(vname, state)
+
+    def update_distribute_state(self, server_ip, image_id, state):
+        client = get_rpc_client()
+        return client.update_distribute_state(server_ip, image_id, state)

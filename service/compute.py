@@ -254,6 +254,6 @@ class ComputeService(xmlrpc.XMLRPC):
 
     def xmlrpc_download_image(self, url, image_uuid):
         target = config.image_path + image_uuid
-        t = threading.Thread(target=fetch_with_wget, args=(url, target))
+        t = threading.Thread(target=fetch_with_wget, args=(url, target, True))
         t.start()
         return True
