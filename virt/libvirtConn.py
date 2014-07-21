@@ -471,7 +471,7 @@ class LibvirtConnection(object):
         image_path = config.image_path + vname + '/disk'
         dest_image = config.image_path + vname + "_" + str(time.time())
         try:
-            utils.execute('qemu-img', 'convert', '-f', 'qcow2', '-O', 'qcow2', image_path, dest_image)
+            utils.execute('qemu-img', 'convert', '-f', 'qcow2', '-O', 'qcow2', '-s', snapshot_name, image_path, dest_image)
             image_meta['data'] = open(dest_image)
             image = glance_client_api.image_create(url, **image_meta)
             image_abs_path_qcow2 = config.image_path + '/' + image.id + '.qcow2'
