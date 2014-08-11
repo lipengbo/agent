@@ -169,7 +169,8 @@ class LibvirtConnection(object):
             LibvirtOpenVswitchDriver.del_vm_port(vname)
             state = 5
         getattr(dom, action)()
-        Domain.update(vname, ofport_request, state)
+        if state == 2 or state == 5:
+            Domain.update(vname, ofport_request, state)
 
     @staticmethod
     def prepare_libvirt_xml(vmInfo):
